@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: jobradar-db
+    environment:
+      POSTGRES_DB: jobradar
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - jobradar-data:/var/lib/postgresql/data
+
+volumes:
+  jobradar-data:
