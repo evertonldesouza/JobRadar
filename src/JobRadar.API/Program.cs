@@ -25,7 +25,8 @@ builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Job Sources
-builder.Services.AddHttpClient<IJobSource, RemoteOkSource>();
+builder.Services.AddHttpClient<RemoteOkSource>();
+builder.Services.AddTransient<IJobSource, RemoteOkSource>();
 
 // MediatR
 builder.Services.AddMediatR(cfg =>
@@ -33,7 +34,7 @@ builder.Services.AddMediatR(cfg =>
 
 // JWT Authentication
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -46,12 +47,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
         };
-    })
-    .AddGoogle(options =>
-    {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
     });
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authBuilder.AddGoogle(options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+    });
+}
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();

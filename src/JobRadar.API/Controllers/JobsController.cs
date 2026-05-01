@@ -23,4 +23,11 @@ public class JobsController : ControllerBase
         var jobs = await _mediator.Send(new GetJobsQuery(technology, location));
         return Ok(jobs);
     }
+
+    [HttpPost("sync")]
+    public async Task<IActionResult> Sync()
+    {
+        var count = await _mediator.Send(new SyncJobsCommand());
+        return Ok(new { imported = count });
+    }
 }
