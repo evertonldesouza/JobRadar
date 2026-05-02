@@ -2,8 +2,41 @@ const API = 'https://jobradar-api-rgcy.onrender.com';
 let token = localStorage.getItem('jobradar_token');
 let favorites = [];
 
+const API = 'https://jobradar-api-rgcy.onrender.com';
+let token = localStorage.getItem('jobradar_token');
+let favorites = [];
+
+async function wakeUpApi() {
+    const grid = document.getElementById('jobs-grid');
+    grid.innerHTML = `
+        <div class="loading">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Acordando o servidor...</p>
+            <p class="loading-sub">O servidor hiberna quando não está em uso. Aguarde alguns segundos.</p>
+            <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        </div>
+    `;
+
+    const maxTentativas = 10;
+    for (let i = 0; i < maxTentativas; i++) {
+        try {
+            const res = await fetch(`${API}/healthz`, { signal: AbortSignal.timeout(5000) });
+            if (res.ok) return true;
+        } catch {}
+        await new Promise(r => setTimeout(r, 3000));
+    }
+    return false;
+}
+
 async function fetchJobs(technology = '', location = '') {
     const grid = document.getElementById('jobs-grid');
+
+    const online = await wakeUpApi();
+    if (!online) {
+        grid.innerHTML = '<div class="loading">Servidor indisponível. Tente novamente em alguns minutos.</div>';
+        return;
+    }
+
     grid.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...</div>';
 
     try {

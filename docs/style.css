@@ -201,7 +201,34 @@ header p {
     color: var(--text-muted);
     font-size: 1.1rem;
 }
+.loading p {
+    margin-top: 12px;
+    font-size: 1rem;
+}
 
+.loading-sub {
+    font-size: 0.85rem !important;
+    color: var(--text-muted);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.loading-bar {
+    width: 300px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 16px auto 0;
+    overflow: hidden;
+}
+
+.loading-bar-fill {
+    height: 100%;
+    width: 30%;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: loading-slide 1.5s ease-in-out infinite;
+}
 #favorites-section {
     margin-top: 40px;
     padding-top: 40px;
@@ -221,4 +248,8 @@ footer {
     color: var(--text-muted);
     font-size: 0.9rem;
     margin-top: 40px;
+}
+@keyframes loading-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
 }
