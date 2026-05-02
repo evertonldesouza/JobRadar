@@ -22,19 +22,27 @@ public class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, int>
 
         foreach (var source in _sources)
         {
-            var jobs = await source.FetchJobsAsync();
-            var newJobs = new List<Domain.Entities.Job>();
-
-            foreach (var job in jobs)
+            try
             {
-                if (!await _jobRepository.ExistsByUrlAsync(job.Url))
-                    newJobs.Add(job);
+                var jobs = await source.FetchJobsAsync();
+                var newJobs = new List<Domain.Entities.Job>();
+
+                foreach (var job in jobs)
+                {
+                    if (!await _jobRepository.ExistsByUrlAsync(job.Url))
+                        newJobs.Add(job);
+                }
+
+                if (newJobs.Count > 0)
+                {
+                    await _jobRepository.AddRangeAsync(newJobs);
+                    total += newJobs.Count;
+                }
             }
-
-            if (newJobs.Count > 0)
+            catch (Exception ex)
             {
-                await _jobRepository.AddRangeAsync(newJobs);
-                total += newJobs.Count;
+                // Loga o erro mas continua com as outras fontes
+                Console.WriteLine($"[Sync] Erro na fonte {source.Name}: {ex.Message}");
             }
         }
 
