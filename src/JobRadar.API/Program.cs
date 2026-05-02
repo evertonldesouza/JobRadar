@@ -96,4 +96,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+app.MapGet("/healthz", () => Results.Ok("healthy"));
+
 app.Run();
