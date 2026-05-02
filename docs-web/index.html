@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobRadar — Vagas Tech</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-satellite-dish"></i> JobRadar</h1>
+            <p>Vagas tech atualizadas diariamente</p>
+            <div class="header-actions">
+                <div id="auth-section">
+                    <button id="btn-login" class="btn-outline">
+                        <i class="fab fa-google"></i> Entrar com Google
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="filters">
+            <input type="text" id="filter-tech" placeholder="Filtrar por tecnologia..." />
+            <input type="text" id="filter-location" placeholder="Filtrar por localização..." />
+            <button id="btn-search" class="btn-primary">
+                <i class="fas fa-search"></i> Buscar
+            </button>
+        </div>
+
+        <div id="jobs-grid" class="jobs-grid">
+            <div class="loading">
+                <i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...
+            </div>
+        </div>
+
+        <div id="favorites-section" style="display:none">
+            <h2><i class="fas fa-star"></i> Meus Favoritos</h2>
+            <div id="favorites-grid" class="jobs-grid"></div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Desenvolvido por Everton L. de Souza &copy; 2026</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
