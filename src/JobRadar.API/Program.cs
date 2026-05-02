@@ -26,7 +26,9 @@ builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddHttpClient<RemoteOkSource>();
+builder.Services.AddHttpClient<AdzunaSource>();
 builder.Services.AddTransient<IJobSource, RemoteOkSource>();
+builder.Services.AddTransient<IJobSource, AdzunaSource>();
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetJobsQuery).Assembly));
