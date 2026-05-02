@@ -1,0 +1,15 @@
+name: JobRadar Daily Sync
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync Jobs
+        run: |
+          curl -X POST https://jobradar-api-rgcy.onrender.com/api/Jobs/sync \
+            -H "Content-Type: application/json"
