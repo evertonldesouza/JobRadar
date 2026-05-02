@@ -2,10 +2,6 @@ const API = 'https://jobradar-api-rgcy.onrender.com';
 let token = localStorage.getItem('jobradar_token');
 let favorites = [];
 
-const API = 'https://jobradar-api-rgcy.onrender.com';
-let token = localStorage.getItem('jobradar_token');
-let favorites = [];
-
 async function wakeUpApi() {
     const grid = document.getElementById('jobs-grid');
     grid.innerHTML = `
