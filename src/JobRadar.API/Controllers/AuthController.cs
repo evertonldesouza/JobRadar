@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace JobRadar.API.Controllers;
 
@@ -55,11 +56,12 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("google")]
-    public IActionResult GoogleLogin()
+    public IActionResult GoogleLogin([FromQuery] string? returnUrl = null)
     {
         var properties = new AuthenticationProperties
         {
-            RedirectUri = Url.Action(nameof(GoogleCallback))
+            RedirectUri = Url.Action(nameof(GoogleCallback)),
+            Items = { { "returnUrl", returnUrl } }
         };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
@@ -67,7 +69,7 @@ public class AuthController : ControllerBase
     [HttpGet("google/callback")]
     public async Task<IActionResult> GoogleCallback()
     {
-        var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+        var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         if (!result.Succeeded) return Unauthorized();
 
         var googleId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
@@ -75,7 +77,7 @@ public class AuthController : ControllerBase
         var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
 
         var user = await _userRepository.GetByGoogleIdAsync(googleId)
-           ?? await _userRepository.GetByEmailAsync(email);
+                ?? await _userRepository.GetByEmailAsync(email);
 
         if (user is null)
         {
