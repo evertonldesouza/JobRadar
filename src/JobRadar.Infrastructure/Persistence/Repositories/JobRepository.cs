@@ -50,4 +50,24 @@ public class JobRepository : IJobRepository
         await _context.Jobs.AddRangeAsync(jobs);
         await _context.SaveChangesAsync();
     }
+    public async Task<int> RemoveDuplicatesAsync()
+    {
+        var allJobs = await _context.Jobs
+            .OrderBy(j => j.CreatedAt)
+            .ToListAsync();
+
+        var seen = new HashSet<string>();
+        var toRemove = new List<Domain.Entities.Job>();
+
+        foreach (var job in allJobs)
+        {
+            var key = $"{job.Title.ToLower()}|{job.Company.ToLower()}";
+            if (!seen.Add(key))
+                toRemove.Add(job);
+        }
+
+        _context.Jobs.RemoveRange(toRemove);
+        await _context.SaveChangesAsync();
+        return toRemove.Count;
+    }
 }

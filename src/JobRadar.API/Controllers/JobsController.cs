@@ -32,4 +32,10 @@ public class JobsController : ControllerBase
         var count = await _mediator.Send(new SyncJobsCommand());
         return Ok(new { imported = count });
     }
+    [HttpDelete("duplicates")]
+    public async Task<IActionResult> RemoveDuplicates()
+    {
+        var count = await _mediator.Send(new RemoveDuplicatesCommand());
+        return Ok(new { removed = count });
+    }
 }

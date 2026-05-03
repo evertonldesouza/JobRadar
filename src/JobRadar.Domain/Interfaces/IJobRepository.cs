@@ -13,5 +13,7 @@ public interface IJobRepository
     Task<bool> ExistsByUrlAsync(string url);
     Task AddRangeAsync(IEnumerable<Job> jobs);    
     Task<bool> ExistsByTitleAndCompanyAsync(string title, string company);
+    Task<int> RemoveDuplicatesAsync();
+
 
 }
