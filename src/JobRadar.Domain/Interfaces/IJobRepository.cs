@@ -11,5 +11,7 @@ public interface IJobRepository
         int pageSize = 20);
     Task<Job?> GetByIdAsync(Guid id);
     Task<bool> ExistsByUrlAsync(string url);
-    Task AddRangeAsync(IEnumerable<Job> jobs);
+    Task AddRangeAsync(IEnumerable<Job> jobs);    
+    Task<bool> ExistsByTitleAndCompanyAsync(string title, string company);
+
 }

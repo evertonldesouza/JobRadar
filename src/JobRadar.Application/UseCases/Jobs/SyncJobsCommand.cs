@@ -29,7 +29,10 @@ public class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, int>
 
                 foreach (var job in jobs)
                 {
-                    if (!await _jobRepository.ExistsByUrlAsync(job.Url))
+                    var urlExists = await _jobRepository.ExistsByUrlAsync(job.Url);
+                    var titleExists = await _jobRepository.ExistsByTitleAndCompanyAsync(job.Title, job.Company);
+
+                    if (!urlExists && !titleExists)
                         newJobs.Add(job);
                 }
 
@@ -41,7 +44,6 @@ public class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, int>
             }
             catch (Exception ex)
             {
-                // Loga o erro mas continua com as outras fontes
                 Console.WriteLine($"[Sync] Erro na fonte {source.Name}: {ex.Message}");
             }
         }

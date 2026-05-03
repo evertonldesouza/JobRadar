@@ -43,7 +43,8 @@ public class JobRepository : IJobRepository
 
     public async Task<bool> ExistsByUrlAsync(string url) =>
         await _context.Jobs.AnyAsync(j => j.Url == url);
-
+    public async Task<bool> ExistsByTitleAndCompanyAsync(string title, string company) =>
+    await _context.Jobs.AnyAsync(j => j.Title == title && j.Company == company);
     public async Task AddRangeAsync(IEnumerable<Job> jobs)
     {
         await _context.Jobs.AddRangeAsync(jobs);
