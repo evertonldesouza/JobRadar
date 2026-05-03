@@ -9,7 +9,17 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Wake up server
+        run: |
+          echo "Acordando o servidor..."
+          curl -s https://jobradar-api-rgcy.onrender.com/healthz
+          sleep 30
+
       - name: Sync Jobs
         run: |
-          curl -X POST https://jobradar-api-rgcy.onrender.com/api/Jobs/sync \
-            -H "Content-Type: application/json"
+          RESULT=$(curl -s -X POST https://jobradar-api-rgcy.onrender.com/api/Jobs/sync \
+            -H "Content-Type: application/json")
+          echo "Resultado: $RESULT"
+          
+          IMPORTED=$(echo $RESULT | grep -o '"imported":[0-9]*' | grep -o '[0-9]*')
+          echo "Vagas importadas: $IMPORTED"
