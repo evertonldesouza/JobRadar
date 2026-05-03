@@ -18,10 +18,12 @@ public class JobsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? technology,
-        [FromQuery] string? location)
+        [FromQuery] string? location,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var jobs = await _mediator.Send(new GetJobsQuery(technology, location));
-        return Ok(jobs);
+        var result = await _mediator.Send(new GetJobsQuery(technology, location, page, pageSize));
+        return Ok(result);
     }
 
     [HttpPost("sync")]

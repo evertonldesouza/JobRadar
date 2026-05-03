@@ -1,6 +1,10 @@
 const API = 'https://jobradar-api-rgcy.onrender.com';
 let token = localStorage.getItem('jobradar_token');
 let favorites = [];
+let currentPage = 1;
+let currentTech = '';
+let currentLocation = '';
+let totalPages = 1;
 
 async function wakeUpApi() {
     const grid = document.getElementById('jobs-grid');
@@ -24,29 +28,43 @@ async function wakeUpApi() {
     return false;
 }
 
-async function fetchJobs(technology = '', location = '') {
+async function fetchJobs(technology = '', location = '', page = 1) {
+    currentTech = technology;
+    currentLocation = location;
+    currentPage = page;
+
     const grid = document.getElementById('jobs-grid');
 
-    const online = await wakeUpApi();
-    if (!online) {
-        grid.innerHTML = '<div class="loading">Servidor indisponível. Tente novamente em alguns minutos.</div>';
-        return;
+    if (page === 1) {
+        const online = await wakeUpApi();
+        if (!online) {
+            grid.innerHTML = '<div class="loading">Servidor indisponível. Tente novamente em alguns minutos.</div>';
+            return;
+        }
+        grid.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...</div>';
     }
-
-    grid.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...</div>';
 
     try {
         const params = new URLSearchParams();
         if (technology) params.append('technology', technology);
         if (location) params.append('location', location);
+        params.append('page', page);
+        params.append('pageSize', 20);
 
         const res = await fetch(`${API}/api/Jobs?${params}`);
-        const jobs = await res.json();
+        const data = await res.json();
+
+        totalPages = data.totalPages;
 
         if (token) await fetchFavorites();
 
-        grid.innerHTML = '';
-        jobs.forEach(job => renderJobCard(job, grid));
+        if (page === 1) grid.innerHTML = '';
+
+        data.items.forEach(job => renderJobCard(job, grid));
+
+        renderPagination();
+        renderJobCount(data.totalCount, data.items.length, page);
+
     } catch {
         grid.innerHTML = '<div class="loading">Erro ao carregar vagas.</div>';
     }
@@ -102,6 +120,52 @@ function renderJobCard(job, container, isFavoriteSection = false) {
     }
 
     container.appendChild(card);
+}
+
+function renderJobCount(total, showing, page) {
+    let counter = document.getElementById('job-counter');
+    if (!counter) {
+        counter = document.createElement('p');
+        counter.id = 'job-counter';
+        counter.className = 'job-counter';
+        document.querySelector('.filters').insertAdjacentElement('afterend', counter);
+    }
+    const start = (page - 1) * 20 + 1;
+    const end = start + showing - 1;
+    counter.textContent = `Exibindo ${start}–${end} de ${total} vagas`;
+}
+
+function renderPagination() {
+    let pagination = document.getElementById('pagination');
+    if (!pagination) {
+        pagination = document.createElement('div');
+        pagination.id = 'pagination';
+        pagination.className = 'pagination';
+        document.getElementById('jobs-grid').insertAdjacentElement('afterend', pagination);
+    }
+
+    pagination.innerHTML = '';
+
+    if (currentPage > 1) {
+        const prev = document.createElement('button');
+        prev.className = 'btn-outline';
+        prev.innerHTML = '<i class="fas fa-chevron-left"></i> Anterior';
+        prev.addEventListener('click', () => fetchJobs(currentTech, currentLocation, currentPage - 1));
+        pagination.appendChild(prev);
+    }
+
+    const info = document.createElement('span');
+    info.className = 'pagination-info';
+    info.textContent = `Página ${currentPage} de ${totalPages}`;
+    pagination.appendChild(info);
+
+    if (currentPage < totalPages) {
+        const next = document.createElement('button');
+        next.className = 'btn-outline';
+        next.innerHTML = 'Próxima <i class="fas fa-chevron-right"></i>';
+        next.addEventListener('click', () => fetchJobs(currentTech, currentLocation, currentPage + 1));
+        pagination.appendChild(next);
+    }
 }
 
 async function toggleFavorite(jobId, btn) {

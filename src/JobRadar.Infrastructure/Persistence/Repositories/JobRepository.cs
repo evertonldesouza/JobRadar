@@ -13,7 +13,11 @@ public class JobRepository : IJobRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Job>> GetAllAsync(string? technology = null, string? location = null)
+    public async Task<(IEnumerable<Job> Jobs, int TotalCount)> GetAllAsync(
+        string? technology = null,
+        string? location = null,
+        int page = 1,
+        int pageSize = 20)
     {
         var query = _context.Jobs.AsQueryable();
 
@@ -23,7 +27,15 @@ public class JobRepository : IJobRepository
         if (!string.IsNullOrWhiteSpace(location))
             query = query.Where(j => j.Location.Contains(location));
 
-        return await query.OrderByDescending(j => j.PublishedAt).ToListAsync();
+        var totalCount = await query.CountAsync();
+
+        var jobs = await query
+            .OrderByDescending(j => j.PublishedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (jobs, totalCount);
     }
 
     public async Task<Job?> GetByIdAsync(Guid id) =>

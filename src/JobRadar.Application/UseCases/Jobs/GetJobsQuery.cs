@@ -4,9 +4,14 @@ using MediatR;
 
 namespace JobRadar.Application.UseCases.Jobs;
 
-public record GetJobsQuery(string? Technology, string? Location) : IRequest<IEnumerable<JobDto>>;
+public record GetJobsQuery(
+    string? Technology,
+    string? Location,
+    int Page = 1,
+    int PageSize = 20
+) : IRequest<PagedResult<JobDto>>;
 
-public class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, IEnumerable<JobDto>>
+public class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, PagedResult<JobDto>>
 {
     private readonly IJobRepository _jobRepository;
 
@@ -15,19 +20,20 @@ public class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, IEnumerable<Job
         _jobRepository = jobRepository;
     }
 
-    public async Task<IEnumerable<JobDto>> Handle(GetJobsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<JobDto>> Handle(GetJobsQuery request, CancellationToken cancellationToken)
     {
-        var jobs = await _jobRepository.GetAllAsync(request.Technology, request.Location);
+        var (jobs, totalCount) = await _jobRepository.GetAllAsync(
+            request.Technology,
+            request.Location,
+            request.Page,
+            request.PageSize
+        );
 
-        return jobs.Select(j => new JobDto(
-            j.Id,
-            j.Title,
-            j.Company,
-            j.Location,
-            j.Url,
-            j.PublishedAt,
-            j.Technologies,
-            j.Source
+        var items = jobs.Select(j => new JobDto(
+            j.Id, j.Title, j.Company, j.Location,
+            j.Url, j.PublishedAt, j.Technologies, j.Source
         ));
+
+        return new PagedResult<JobDto>(items, request.Page, request.PageSize, totalCount);
     }
 }
