@@ -90,7 +90,17 @@ async function fetchFavorites() {
     } catch {}
 }
 
-function renderJobCard(job, container, isFavoriteSection = false) {
+function getTagClass(tech) {
+    const map = {
+        'c#': 'tag-csharp', '.net': 'tag-dotnet', 'python': 'tag-python',
+        'javascript': 'tag-javascript', 'js': 'tag-js', 'typescript': 'tag-typescript',
+        'ts': 'tag-ts', 'react': 'tag-react', 'java': 'tag-java',
+        'go': 'tag-go', 'docker': 'tag-docker', 'sql': 'tag-sql'
+    };
+    return map[tech.toLowerCase()] || 'tag-default';
+}
+
+function renderJobCard(job, container) {
     const isFav = favorites.includes(job.id);
     const card = document.createElement('div');
     card.className = 'job-card';
@@ -103,10 +113,14 @@ function renderJobCard(job, container, isFavoriteSection = false) {
                 </button>
             ` : ''}
         </div>
-        <div class="job-company"><i class="fas fa-building"></i> ${job.company || 'Empresa não informada'}</div>
-        <div class="job-location"><i class="fas fa-map-marker-alt"></i> ${job.location || 'Remoto'}</div>
+        <div class="job-meta">
+            <div class="job-company"><i class="fas fa-building"></i> ${job.company || 'Empresa não informada'}</div>
+            <div class="job-location"><i class="fas fa-map-marker-alt"></i> ${job.location || 'Remoto'}</div>
+        </div>
         <div class="job-tags">
-            ${(job.technologies || []).slice(0, 5).map(t => `<span class="tag">${t}</span>`).join('')}
+            ${(job.technologies || []).slice(0, 5).map(t =>
+                `<span class="tag ${getTagClass(t)}">${t}</span>`
+            ).join('')}
         </div>
         <div class="job-footer">
             <span>${new Date(job.publishedAt).toLocaleDateString('pt-BR')}</span>
@@ -115,9 +129,7 @@ function renderJobCard(job, container, isFavoriteSection = false) {
     `;
 
     const favBtn = card.querySelector('.btn-favorite');
-    if (favBtn) {
-        favBtn.addEventListener('click', () => toggleFavorite(job.id, favBtn));
-    }
+    if (favBtn) favBtn.addEventListener('click', () => toggleFavorite(job.id, favBtn));
 
     container.appendChild(card);
 }

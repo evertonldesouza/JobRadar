@@ -6,12 +6,14 @@
     <title>JobRadar — Vagas Tech</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
 </head>
 <body>
     <header>
         <div class="container">
-            <h1><i class="fas fa-satellite-dish"></i> JobRadar</h1>
-            <p>Vagas tech atualizadas diariamente</p>
+            <div class="header-eyebrow">Atualizado diariamente</div>
+            <h1>JobRadar</h1>
+            <p>Vagas tech curadas de múltiplas fontes em um só lugar</p>
             <div class="header-actions">
                 <div id="auth-section">
                     <button id="btn-login" class="btn-outline">
@@ -23,9 +25,15 @@
     </header>
 
     <main class="container">
-        <div class="filters">
-            <input type="text" id="filter-tech" placeholder="Filtrar por tecnologia..." />
-            <input type="text" id="filter-location" placeholder="Filtrar por localização..." />
+        <div class="filters-wrapper">
+            <div class="filter-input-wrapper">
+                <i class="fas fa-code"></i>
+                <input type="text" id="filter-tech" placeholder="Tecnologia (ex: python, react...)" />
+            </div>
+            <div class="filter-input-wrapper">
+                <i class="fas fa-map-marker-alt"></i>
+                <input type="text" id="filter-location" placeholder="Localização (ex: London, UK...)" />
+            </div>
             <button id="btn-search" class="btn-primary">
                 <i class="fas fa-search"></i> Buscar
             </button>
@@ -33,7 +41,8 @@
 
         <div id="jobs-grid" class="jobs-grid">
             <div class="loading">
-                <i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <p>Carregando vagas...</p>
             </div>
         </div>
 
@@ -44,7 +53,7 @@
     </main>
 
     <footer>
-        <p>Desenvolvido por Everton L. de Souza &copy; 2026</p>
+        <p>Desenvolvido por <strong>Everton L. de Souza</strong> &copy; 2026</p>
     </footer>
 
     <script src="script.js"></script>
