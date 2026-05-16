@@ -42,7 +42,7 @@ async function waitForJobsJson(url, budgetMs) {
                     setTimeout(
                         r,
                         Math.max(3000, Math.min(25000, Math.round(3500 * Math.pow(1.22, attempt - 1))))
-                    );
+                    ));
                 continue;
             }
             const data = await res.json();
@@ -54,7 +54,7 @@ async function waitForJobsJson(url, budgetMs) {
             setTimeout(
                 r,
                 Math.max(3000, Math.min(25000, Math.round(3500 * Math.pow(1.22, attempt - 1))))
-            );
+            ));
     }
     return null;
 }
