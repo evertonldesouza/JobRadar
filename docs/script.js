@@ -10,30 +10,55 @@ let totalPages = 1;
 function fetchWithTimeout(url, ms) {
     const ctrl = new AbortController();
     const id = setTimeout(() => ctrl.abort(), ms);
-    return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+    const opts = { signal: ctrl.signal, cache: 'no-store', credentials: 'omit' };
+    return fetch(url, opts).finally(() => clearTimeout(id));
+}
+
+/** Ping isolado: se healthz disparar erro (ex.: CORS na página de erro do proxy), ainda tentamos /api/Jobs. */
+async function pingApi(path, timeoutMs) {
+    try {
+        const res = await fetchWithTimeout(`${API}${path}`, timeoutMs);
+        return res.ok;
+    } catch {
+        return false;
+    }
 }
 
 async function wakeUpApi() {
     const grid = document.getElementById('jobs-grid');
+    const started = Date.now();
+    const totalBudgetMs = 8 * 60 * 1000;
+    const deadline = started + totalBudgetMs;
+
     grid.innerHTML = `
         <div class="loading">
             <i class="fas fa-circle-notch fa-spin"></i>
             <p>Acordando o servidor...</p>
-            <p class="loading-sub">No plano gratuito do Render a primeira resposta pode levar até ~1 minuto. Aguarde.</p>
+            <p class="loading-sub" id="wake-hint">No plano gratuito do Render o serviço pode levar <strong>2 a 4 minutos</strong> após ficar inativo. Esta página fica tentando até conseguir.</p>
+            <p class="loading-sub wake-elapsed" id="wake-elapsed" aria-live="polite"></p>
             <div class="loading-bar"><div class="loading-bar-fill"></div></div>
         </div>
     `;
 
-    const maxTentativas = 18;
-    for (let i = 0; i < maxTentativas; i++) {
-        const timeoutMs = i === 0 ? 90000 : 25000;
-        try {
-            let res = await fetchWithTimeout(`${API}/healthz`, timeoutMs);
-            if (res.ok) return true;
-            res = await fetchWithTimeout(`${API}/api/Jobs?page=1&pageSize=1`, timeoutMs);
-            if (res.ok) return true;
-        } catch {}
-        await new Promise(r => setTimeout(r, 4000));
+    const elapsedEl = () => document.getElementById('wake-elapsed');
+    let attempt = 0;
+
+    while (Date.now() < deadline) {
+        attempt++;
+        const sec = Math.floor((Date.now() - started) / 1000);
+        const el = elapsedEl();
+        if (el) el.textContent = `Tentativa ${attempt} · ${sec}s aguardando…`;
+
+        const timeoutMs = attempt <= 3 ? 120000 : 75000;
+
+        if (await pingApi('/healthz', timeoutMs)) return true;
+        if (await pingApi('/api/Jobs?page=1&pageSize=1', timeoutMs)) return true;
+
+        const waitMs = Math.max(
+            3000,
+            Math.min(25000, Math.round(3500 * Math.pow(1.22, attempt - 1)))
+        );
+        await new Promise(r => setTimeout(r, waitMs));
     }
     return false;
 }
@@ -70,7 +95,7 @@ async function fetchJobs(technology = '', location = '', page = 1) {
         params.append('page', page);
         params.append('pageSize', 20);
 
-        const res = await fetch(`${API}/api/Jobs?${params}`);
+        const res = await fetchWithTimeout(`${API}/api/Jobs?${params}`, 120000);
         const data = await res.json();
 
         totalPages = data.totalPages;
