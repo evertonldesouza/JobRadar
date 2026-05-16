@@ -190,10 +190,6 @@ header p {
     flex-wrap: wrap;
 }
 
-.filters {
-    display: contents;
-}
-
 .filter-input-wrapper {
     flex: 1;
     min-width: 200px;
@@ -207,9 +203,11 @@ header p {
     transform: translateY(-50%);
     color: var(--text-dim);
     font-size: 15px;
+    pointer-events: none;
+    z-index: 1;
 }
 
-.filters input {
+.filter-input-wrapper input {
     width: 100%;
     background: var(--bg-3);
     border: 1px solid var(--border);
@@ -221,9 +219,9 @@ header p {
     transition: border-color 0.2s;
 }
 
-.filters input::placeholder { color: var(--text-dim); }
+.filter-input-wrapper input::placeholder { color: var(--text-dim); }
 
-.filters input:focus {
+.filter-input-wrapper input:focus {
     outline: none;
     border-color: var(--purple);
     background: var(--surface-2);
@@ -421,6 +419,16 @@ header p {
     color: var(--text-dim) !important;
     max-width: 380px;
     margin: 8px auto 0 !important;
+}
+
+.loading-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.loading-error .btn-primary {
+    margin-top: 24px;
 }
 
 .loading-bar {

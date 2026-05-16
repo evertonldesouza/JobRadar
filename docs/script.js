@@ -6,24 +6,34 @@ let currentTech = '';
 let currentLocation = '';
 let totalPages = 1;
 
+/** Timeout compatível com navegadores sem AbortSignal.timeout (ex.: Safari mais antigo). */
+function fetchWithTimeout(url, ms) {
+    const ctrl = new AbortController();
+    const id = setTimeout(() => ctrl.abort(), ms);
+    return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 async function wakeUpApi() {
     const grid = document.getElementById('jobs-grid');
     grid.innerHTML = `
         <div class="loading">
             <i class="fas fa-circle-notch fa-spin"></i>
             <p>Acordando o servidor...</p>
-            <p class="loading-sub">O servidor hiberna quando não está em uso. Aguarde alguns segundos.</p>
+            <p class="loading-sub">No plano gratuito do Render a primeira resposta pode levar até ~1 minuto. Aguarde.</p>
             <div class="loading-bar"><div class="loading-bar-fill"></div></div>
         </div>
     `;
 
-    const maxTentativas = 10;
+    const maxTentativas = 18;
     for (let i = 0; i < maxTentativas; i++) {
+        const timeoutMs = i === 0 ? 90000 : 25000;
         try {
-            const res = await fetch(`${API}/healthz`, { signal: AbortSignal.timeout(5000) });
+            let res = await fetchWithTimeout(`${API}/healthz`, timeoutMs);
+            if (res.ok) return true;
+            res = await fetchWithTimeout(`${API}/api/Jobs?page=1&pageSize=1`, timeoutMs);
             if (res.ok) return true;
         } catch {}
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
     }
     return false;
 }
@@ -38,7 +48,16 @@ async function fetchJobs(technology = '', location = '', page = 1) {
     if (page === 1) {
         const online = await wakeUpApi();
         if (!online) {
-            grid.innerHTML = '<div class="loading">Servidor indisponível. Tente novamente em alguns minutos.</div>';
+            grid.innerHTML = `
+                <div class="loading loading-error">
+                    <p>Servidor indisponível ou ainda acordando.</p>
+                    <p class="loading-sub">Confirme no Render se o serviço está no ar; em seguida tente de novo.</p>
+                    <button type="button" class="btn-primary" id="btn-retry-load">
+                        <i class="fas fa-redo"></i> Tentar novamente
+                    </button>
+                </div>`;
+            document.getElementById('btn-retry-load').addEventListener('click', () =>
+                fetchJobs(currentTech, currentLocation, 1));
             return;
         }
         grid.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...</div>';
@@ -140,7 +159,7 @@ function renderJobCount(total, showing, page) {
         counter = document.createElement('p');
         counter.id = 'job-counter';
         counter.className = 'job-counter';
-        document.querySelector('.filters').insertAdjacentElement('afterend', counter);
+        document.querySelector('.filters-wrapper').insertAdjacentElement('afterend', counter);
     }
     const start = (page - 1) * 20 + 1;
     const end = start + showing - 1;
