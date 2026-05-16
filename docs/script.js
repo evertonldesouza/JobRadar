@@ -6,61 +6,57 @@ let currentTech = '';
 let currentLocation = '';
 let totalPages = 1;
 
-/** Timeout compatível com navegadores sem AbortSignal.timeout (ex.: Safari mais antigo). */
-function fetchWithTimeout(url, ms) {
+/**
+ * fetch com timeout. `simple=true` evita headers extras (pedido CORS “simples” no browser).
+ */
+function fetchWithTimeout(url, ms, simple = false) {
     const ctrl = new AbortController();
     const id = setTimeout(() => ctrl.abort(), ms);
-    const opts = { signal: ctrl.signal, cache: 'no-store', credentials: 'omit' };
+    const opts = simple
+        ? { signal: ctrl.signal }
+        : { signal: ctrl.signal, cache: 'no-store', credentials: 'omit' };
     return fetch(url, opts).finally(() => clearTimeout(id));
 }
 
-/** Ping isolado: se healthz disparar erro (ex.: CORS na página de erro do proxy), ainda tentamos /api/Jobs. */
-async function pingApi(path, timeoutMs) {
-    try {
-        const res = await fetchWithTimeout(`${API}${path}`, timeoutMs);
-        return res.ok;
-    } catch {
-        return false;
-    }
-}
-
-async function wakeUpApi() {
-    const grid = document.getElementById('jobs-grid');
+/** Espera a API responder (mesmo endpoint que a listagem usa). Evita “acordar” healthz e falhar no Jobs. */
+async function waitForJobsJson(url, budgetMs) {
     const started = Date.now();
-    const totalBudgetMs = 8 * 60 * 1000;
-    const deadline = started + totalBudgetMs;
-
-    grid.innerHTML = `
-        <div class="loading">
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <p>Acordando o servidor...</p>
-            <p class="loading-sub" id="wake-hint">No plano gratuito do Render o serviço pode levar <strong>2 a 4 minutos</strong> após ficar inativo. Esta página fica tentando até conseguir.</p>
-            <p class="loading-sub wake-elapsed" id="wake-elapsed" aria-live="polite"></p>
-            <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-        </div>
-    `;
-
-    const elapsedEl = () => document.getElementById('wake-elapsed');
+    const deadline = started + budgetMs;
     let attempt = 0;
+
+    const updateElapsed = () => {
+        const el = document.getElementById('wake-elapsed');
+        if (!el) return;
+        const sec = Math.floor((Date.now() - started) / 1000);
+        el.textContent = `Tentativa ${attempt} · ${sec}s aguardando…`;
+    };
 
     while (Date.now() < deadline) {
         attempt++;
-        const sec = Math.floor((Date.now() - started) / 1000);
-        const el = elapsedEl();
-        if (el) el.textContent = `Tentativa ${attempt} · ${sec}s aguardando…`;
-
+        updateElapsed();
         const timeoutMs = attempt <= 3 ? 120000 : 75000;
-
-        if (await pingApi('/healthz', timeoutMs)) return true;
-        if (await pingApi('/api/Jobs?page=1&pageSize=1', timeoutMs)) return true;
-
-        const waitMs = Math.max(
-            3000,
-            Math.min(25000, Math.round(3500 * Math.pow(1.22, attempt - 1)))
-        );
-        await new Promise(r => setTimeout(r, waitMs));
+        try {
+            const res = await fetchWithTimeout(url, timeoutMs, true);
+            if (!res.ok) {
+                await new Promise(r =>
+                    setTimeout(
+                        r,
+                        Math.max(3000, Math.min(25000, Math.round(3500 * Math.pow(1.22, attempt - 1))))
+                    );
+                continue;
+            }
+            const data = await res.json();
+            if (data && Array.isArray(data.items)) return data;
+        } catch {
+            /* rede / CORS / timeout durante cold start */
+        }
+        await new Promise(r =>
+            setTimeout(
+                r,
+                Math.max(3000, Math.min(25000, Math.round(3500 * Math.pow(1.22, attempt - 1))))
+            );
     }
-    return false;
+    return null;
 }
 
 async function fetchJobs(technology = '', location = '', page = 1) {
@@ -70,13 +66,30 @@ async function fetchJobs(technology = '', location = '', page = 1) {
 
     const grid = document.getElementById('jobs-grid');
 
+    const params = new URLSearchParams();
+    if (technology) params.append('technology', technology);
+    if (location) params.append('location', location);
+    params.append('page', page);
+    params.append('pageSize', 20);
+
+    const listUrl = `${API}/api/Jobs?${params}`;
+
     if (page === 1) {
-        const online = await wakeUpApi();
-        if (!online) {
+        grid.innerHTML = `
+        <div class="loading">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Acordando o servidor e carregando vagas...</p>
+            <p class="loading-sub" id="wake-hint">No plano gratuito do Render isso pode levar vários minutos. Esta página repete o pedido até a API responder.</p>
+            <p class="loading-sub wake-elapsed" id="wake-elapsed" aria-live="polite"></p>
+            <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        </div>`;
+
+        const data = await waitForJobsJson(listUrl, 12 * 60 * 1000);
+        if (!data) {
             grid.innerHTML = `
                 <div class="loading loading-error">
                     <p>Servidor indisponível ou ainda acordando.</p>
-                    <p class="loading-sub">Confirme no Render se o serviço está no ar; em seguida tente de novo.</p>
+                    <p class="loading-sub">Confira o serviço no Render. Se não carregar, faça <strong>Ctrl+F5</strong> (ou limpe o cache) para pegar o JavaScript mais recente do GitHub Pages.</p>
                     <button type="button" class="btn-primary" id="btn-retry-load">
                         <i class="fas fa-redo"></i> Tentar novamente
                     </button>
@@ -85,24 +98,29 @@ async function fetchJobs(technology = '', location = '', page = 1) {
                 fetchJobs(currentTech, currentLocation, 1));
             return;
         }
-        grid.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i> Carregando vagas...</div>';
+
+        totalPages = data.totalPages;
+        if (token) await fetchFavorites();
+        grid.innerHTML = '';
+        data.items.forEach(job => renderJobCard(job, grid));
+        renderPagination();
+        renderJobCount(data.totalCount, data.items.length, page);
+        return;
     }
 
     try {
-        const params = new URLSearchParams();
-        if (technology) params.append('technology', technology);
-        if (location) params.append('location', location);
-        params.append('page', page);
-        params.append('pageSize', 20);
-
-        const res = await fetchWithTimeout(`${API}/api/Jobs?${params}`, 120000);
+        const res = await fetchWithTimeout(listUrl, 120000, true);
+        if (!res.ok) {
+            grid.innerHTML = `<div class="loading">Erro ao carregar vagas (HTTP ${res.status}).</div>`;
+            return;
+        }
         const data = await res.json();
 
         totalPages = data.totalPages;
 
         if (token) await fetchFavorites();
 
-        if (page === 1) grid.innerHTML = '';
+        grid.innerHTML = '';
 
         data.items.forEach(job => renderJobCard(job, grid));
 
