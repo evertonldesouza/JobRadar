@@ -9,6 +9,7 @@ public class User
     public string? GoogleId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public List<FavoriteJob> Favorites { get; private set; } = [];
+    public List<JobAlert> Alerts { get; private set; } = [];
 
     protected User() { }
 

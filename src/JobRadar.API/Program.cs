@@ -34,8 +34,11 @@ builder.Services.AddDataProtection()
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+builder.Services.AddScoped<IJobAlertRepository, JobAlertRepository>();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
+
+builder.Services.AddSingleton<IEmailService, MockEmailService>();
 
 builder.Services.AddHttpClient<RemoteOkSource>();
 builder.Services.AddHttpClient<AdzunaSource>();

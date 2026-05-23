@@ -96,6 +96,37 @@ namespace JobRadar.Infrastructure.Migrations
                     b.ToTable("Jobs");
                 });
 
+            modelBuilder.Entity("JobRadar.Domain.Entities.JobAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Technology")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("JobAlerts");
+                });
+
             modelBuilder.Entity("JobRadar.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -166,8 +197,21 @@ namespace JobRadar.Infrastructure.Migrations
                     b.Navigation("Job");
                 });
 
+            modelBuilder.Entity("JobRadar.Domain.Entities.JobAlert", b =>
+                {
+                    b.HasOne("JobRadar.Domain.Entities.User", "User")
+                        .WithMany("Alerts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("JobRadar.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Alerts");
+
                     b.Navigation("Favorites");
                 });
 #pragma warning restore 612, 618

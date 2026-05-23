@@ -1,3 +1,4 @@
+using JobRadar.Application.Abstractions;
 using JobRadar.Application.UseCases.Jobs;
 using JobRadar.Domain.Entities;
 using JobRadar.Domain.Interfaces;
@@ -33,7 +34,10 @@ public class JobsHandlerTests
 
         var repo = new Mock<IJobRepository>();
 
-        var handler = new SyncJobsCommandHandler([source.Object], repo.Object);
+        var emailService = new Mock<IEmailService>();
+        var alertRepo = new Mock<IJobAlertRepository>();
+
+        var handler = new SyncJobsCommandHandler([source.Object], repo.Object, emailService.Object, alertRepo.Object);
         var result = await handler.Handle(new SyncJobsCommand(), default);
 
         Assert.Equal(0, result);
