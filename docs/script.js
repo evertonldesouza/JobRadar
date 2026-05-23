@@ -4,6 +4,7 @@ let favorites = [];
 let currentPage = 1;
 let currentTech = new URLSearchParams(location.search).get('tech') || '';
 let currentLocation = new URLSearchParams(location.search).get('loc') || '';
+let currentSource = new URLSearchParams(location.search).get('source') || '';
 let totalPages = 1;
 let isLoading = false;
 let debounceTimer = null;
@@ -49,6 +50,7 @@ function updateURL() {
     const params = new URLSearchParams();
     if (currentTech) params.set('tech', currentTech);
     if (currentLocation) params.set('loc', currentLocation);
+    if (currentSource) params.set('source', currentSource);
     if (currentPage > 1) params.set('page', currentPage);
     const url = params.toString()
         ? `${location.pathname}?${params}`
@@ -90,11 +92,12 @@ async function waitForJobsJson(url, budgetMs) {
     return null;
 }
 
-async function fetchJobs(technology, location, page, append = false) {
+async function fetchJobs(technology, location, source, page, append = false) {
     if (isLoading) return;
     isLoading = true;
     currentTech = technology || '';
     currentLocation = location || '';
+    currentSource = source || '';
     currentPage = page;
     updateURL();
 
@@ -102,6 +105,7 @@ async function fetchJobs(technology, location, page, append = false) {
     const params = new URLSearchParams();
     if (technology) params.append('technology', technology);
     if (location) params.append('location', location);
+    if (source) params.append('source', source);
     params.append('page', page);
     params.append('pageSize', 20);
     const listUrl = `${API}/api/Jobs?${params}`;
@@ -128,7 +132,7 @@ async function fetchJobs(technology, location, page, append = false) {
                         </button>
                     </div>`;
                 document.getElementById('btn-retry-load').addEventListener('click', () =>
-                    fetchJobs(currentTech, currentLocation, 1));
+                    fetchJobs(currentTech, currentLocation, currentSource, 1));
                 isLoading = false;
                 return;
             }
@@ -341,7 +345,7 @@ function renderLoadMore() {
 
     document.getElementById('btn-load-more').addEventListener('click', () => {
         currentPage++;
-        fetchJobs(currentTech, currentLocation, currentPage, true);
+        fetchJobs(currentTech, currentLocation, currentSource, currentPage, true);
     });
 }
 
@@ -398,7 +402,8 @@ function debounceSearch() {
     debounceTimer = setTimeout(() => {
         const tech = document.getElementById('filter-tech').value;
         const loc = document.getElementById('filter-location').value;
-        fetchJobs(tech, loc, 1);
+        const src = document.getElementById('filter-source').value;
+        fetchJobs(tech, loc, src, 1);
     }, 400);
 }
 
@@ -406,8 +411,11 @@ document.getElementById('btn-search').addEventListener('click', () => {
     clearTimeout(debounceTimer);
     const tech = document.getElementById('filter-tech').value;
     const loc = document.getElementById('filter-location').value;
-    fetchJobs(tech, loc, 1);
+    const src = document.getElementById('filter-source').value;
+    fetchJobs(tech, loc, src, 1);
 });
+
+document.getElementById('filter-source').addEventListener('change', debounceSearch);
 
 document.getElementById('filter-tech').addEventListener('input', debounceSearch);
 document.getElementById('filter-location').addEventListener('input', debounceSearch);
@@ -442,6 +450,7 @@ if (tokenParam) {
 
 document.getElementById('filter-tech').value = currentTech;
 document.getElementById('filter-location').value = currentLocation;
+document.getElementById('filter-source').value = currentSource;
 
 updateAuthSection();
-fetchJobs(currentTech, currentLocation, 1);
+fetchJobs(currentTech, currentLocation, currentSource, 1);

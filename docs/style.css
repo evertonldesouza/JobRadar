@@ -221,10 +221,30 @@ header p {
 
 .filter-input-wrapper input::placeholder { color: var(--text-dim); }
 
-.filter-input-wrapper input:focus {
+.filter-input-wrapper input:focus,
+.filter-input-wrapper select:focus {
     outline: none;
     border-color: var(--purple);
     background: var(--surface-2);
+}
+
+.filter-input-wrapper select {
+    width: 100%;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 14px 11px 40px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.2s;
+    appearance: none;
+    cursor: pointer;
+}
+
+.filter-source-wrapper {
+    min-width: 180px;
+    flex: 0 0 auto;
 }
 
 /* JOB COUNTER */
