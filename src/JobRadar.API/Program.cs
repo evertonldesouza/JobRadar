@@ -1,11 +1,15 @@
 using System.Text;
+using FluentValidation;
+using JobRadar.API.Middleware;
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Behaviors;
 using JobRadar.Application.UseCases.Jobs;
 using JobRadar.Domain.Interfaces;
 using JobRadar.Infrastructure.Persistence;
 using JobRadar.Infrastructure.Persistence.Repositories;
 using JobRadar.Infrastructure.Services;
 using JobRadar.Infrastructure.Sources;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -32,11 +36,22 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddHttpClient<RemoteOkSource>();
 builder.Services.AddHttpClient<AdzunaSource>();
+builder.Services.AddHttpClient<RemotiveSource>();
+builder.Services.AddHttpClient<CareerNestSource>();
+builder.Services.AddHttpClient<JobsBaseSource>();
 builder.Services.AddTransient<IJobSource, RemoteOkSource>();
 builder.Services.AddTransient<IJobSource, AdzunaSource>();
+builder.Services.AddTransient<IJobSource, RemotiveSource>();
+builder.Services.AddTransient<IJobSource, CareerNestSource>();
+builder.Services.AddTransient<IJobSource, JobsBaseSource>();
 
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(GetJobsQuery).Assembly));
+{
+    cfg.RegisterServicesFromAssembly(typeof(GetJobsQuery).Assembly);
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+});
+
+builder.Services.AddValidatorsFromAssembly(typeof(GetJobsQuery).Assembly);
 
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 var authBuilder = builder.Services.AddAuthentication(options =>
@@ -86,6 +101,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
@@ -106,6 +123,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.MapGet("/healthz", () => Results.Ok("healthy"));
+app.MapGet("/healthz", async (AppDbContext db) =>
+{
+    var dbOk = await db.Database.CanConnectAsync();
+    return dbOk ? Results.Ok(new { status = "healthy", database = "connected" })
+                : Results.StatusCode(503);
+});
 
 app.Run();
