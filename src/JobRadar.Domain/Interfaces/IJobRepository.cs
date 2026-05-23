@@ -7,6 +7,7 @@ public interface IJobRepository
     Task<(IEnumerable<Job> Jobs, int TotalCount)> GetAllAsync(
         string? technology = null,
         string? location = null,
+        string? source = null,
         int page = 1,
         int pageSize = 20);
     Task<Job?> GetByIdAsync(Guid id);

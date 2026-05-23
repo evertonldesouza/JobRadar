@@ -40,6 +40,7 @@ public class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, int>
                 {
                     await _jobRepository.AddRangeAsync(newJobs);
                     total += newJobs.Count;
+                    JobsCache.Version++;
                 }
             }
             catch (Exception ex)

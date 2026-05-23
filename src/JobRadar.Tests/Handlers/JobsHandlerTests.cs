@@ -1,6 +1,7 @@
 using JobRadar.Application.UseCases.Jobs;
 using JobRadar.Domain.Entities;
 using JobRadar.Domain.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 
 namespace JobRadar.Tests.Handlers;
@@ -11,11 +12,12 @@ public class JobsHandlerTests
     public async Task GetJobs_ReturnsPagedResult()
     {
         var repo = new Mock<IJobRepository>();
+        var cache = new MemoryCache(new MemoryCacheOptions());
         var jobs = new List<Job> { Job.Create("Dev", "Co", "Remote", "url", DateTime.UtcNow, ["C#"], "Test") };
-        repo.Setup(r => r.GetAllAsync(null, null, 1, 20)).ReturnsAsync((jobs, 1));
+        repo.Setup(r => r.GetAllAsync(null, null, null, 1, 20)).ReturnsAsync((jobs, 1));
 
-        var handler = new GetJobsQueryHandler(repo.Object);
-        var result = await handler.Handle(new GetJobsQuery(null, null, 1, 20), default);
+        var handler = new GetJobsQueryHandler(repo.Object, cache);
+        var result = await handler.Handle(new GetJobsQuery(null, null, null, 1, 20), default);
 
         Assert.Single(result.Items);
         Assert.Equal(1, result.TotalCount);

@@ -16,6 +16,7 @@ public class JobRepository : IJobRepository
     public async Task<(IEnumerable<Job> Jobs, int TotalCount)> GetAllAsync(
         string? technology = null,
         string? location = null,
+        string? source = null,
         int page = 1,
         int pageSize = 20)
     {
@@ -26,6 +27,9 @@ public class JobRepository : IJobRepository
 
         if (!string.IsNullOrWhiteSpace(location))
             query = query.Where(j => j.Location.Contains(location));
+
+        if (!string.IsNullOrWhiteSpace(source))
+            query = query.Where(j => j.Source == source);
 
         var totalCount = await query.CountAsync();
 
