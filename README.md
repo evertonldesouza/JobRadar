@@ -18,20 +18,24 @@
 
 ## Sobre
 
-O JobRadar agrega vagas de tecnologia de múltiplas fontes, permite filtrar por tecnologia e localização, salvar favoritos e recebe atualizações automáticas via CI/CD.
+O JobRadar agrega vagas de tecnologia de múltiplas fontes, permite filtrar por tecnologia, localização e fonte, salvar favoritos, criar alertas de vagas e recebe atualizações automáticas via background service.
 
 ## Funcionalidades
 
 - Autenticação com JWT e OAuth via Google
-- Listagem e filtragem de vagas por tecnologia e localização
+- Listagem e filtragem de vagas por tecnologia, localização e fonte
 - Sistema de favoritos por usuário
+- **Alertas de vagas** — cria alertas com filtros personalizados; novas vagas compatíveis disparam notificação por email (mock)
 - Paginação e scoring de relevância
 - 5 fontes de vagas agregadas (RemoteOK, Remotive, CareerNest, JobsBase, Adzuna)
 - Sincronização manual via `POST /api/jobs/sync`
+- **Sincronização automática** a cada 1 hora via background service
+- **Cache em memória** com invalidação automática após sync
+- **Rate limiting** (60 req/min)
+- **Export CSV** das vagas
 - Health check com verificação de banco de dados
 - Exception middleware global com logging centralizado
 - Validação com FluentValidation + pipeline MediatR
-- Middleware de exceções com respostas padronizadas
 - Testes unitários com xUnit + Moq
 - Deploy automatizado com GitHub Actions
 
@@ -76,7 +80,34 @@ O JobRadar agrega vagas de **5 fontes públicas** — todas gratuitas e sem nece
 | [JobsBase](https://jobsbase.io) | `GET /api/v1/jobs?limit=50` | API REST | ❌ |
 | [Adzuna](https://adzuna.com) | `GET /api/v1/api/jobs/gb/search/1` | API REST | ✅ `Adzuna:AppId` + `Adzuna:AppKey` |
 
-O sync ocorre via `POST /api/jobs/sync` — cada fonte é consultada em sequência com deduplicação por URL e título+empresa. Fontes que falham (timeout, erro HTTP) não interrompem as demais.
+O sync ocorre via `POST /api/jobs/sync` e também automaticamente a cada **1 hora** via `JobsSyncBackgroundService`. Cada fonte é consultada em sequência com deduplicação por URL e título+empresa. Fontes que falham (timeout, erro HTTP) não interrompem as demais.
+
+Após cada sync, novas vagas são comparadas contra os **alertas ativos** — se alguma vaga corresponder aos filtros de um alerta, uma notificação é enviada (atualmente via `MockEmailService`, que loga no console).
+
+## Alertas de vagas
+
+Usuários autenticados podem criar alertas para ser notificados quando novas vagas compatíveis aparecerem.
+
+| Método | Endpoint | Descrição |
+|---|---|---|
+| `GET` | `/api/alerts` | Lista alertas do usuário |
+| `POST` | `/api/alerts` | Cria um alerta |
+| `DELETE` | `/api/alerts/{id}` | Remove um alerta |
+
+**Exemplo de criação de alerta:**
+
+```json
+{
+  "technology": "React",
+  "location": "Remoto",
+  "source": "RemoteOK"
+}
+```
+
+Todos os campos são opcionais — um alerta sem filtros notifica sobre **todas as novas vagas**. A correspondência é case-insensitive e parcial (ex.: "React" também match "React Native").
+
+> [!NOTE]
+> O `MockEmailService` atual apenas loga as notificações no console. Em produção, troque a implementação no DI por um serviço real (SendGrid, SMTP, etc).
 
 Para adicionar uma nova fonte, crie uma classe implementando `IJobSource` em `src/JobRadar.Infrastructure/Sources/` e registre-a em `Program.cs`:
 
