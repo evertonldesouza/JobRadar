@@ -1,5 +1,7 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using FluentValidation;
+using JobRadar.API.BackgroundServices;
 using JobRadar.API.Middleware;
 using JobRadar.Application.Abstractions;
 using JobRadar.Application.Behaviors;
@@ -12,6 +14,7 @@ using JobRadar.Infrastructure.Sources;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -88,10 +91,23 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
     });
 }
 
+builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+builder.Services.AddHostedService<JobsSyncBackgroundService>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("Api", opt =>
+    {
+        opt.PermitLimit = 60;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = 429;
+});
 
 builder.Services.AddCors(options =>
 {
@@ -118,6 +134,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseRateLimiter();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
