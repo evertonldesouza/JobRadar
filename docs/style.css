@@ -392,13 +392,159 @@ header p {
 }
 
 .source-badge {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
     padding: 3px 8px;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 500;
+}
+
+.source-badge[data-source="RemoteOK"] {
+    background: rgba(16,217,160,0.12);
+    border: 1px solid rgba(16,217,160,0.2);
+    color: #10d9a0;
+}
+
+.source-badge[data-source="Remotive"] {
+    background: rgba(139,92,246,0.12);
+    border: 1px solid rgba(139,92,246,0.2);
+    color: #a78bfa;
+}
+
+.source-badge[data-source="CareerNest"] {
+    background: rgba(59,130,246,0.12);
+    border: 1px solid rgba(59,130,246,0.2);
+    color: #60a5fa;
+}
+
+.source-badge[data-source="JobsBase"] {
+    background: rgba(249,115,22,0.12);
+    border: 1px solid rgba(249,115,22,0.2);
+    color: #fb923c;
+}
+
+.source-badge[data-source="Adzuna"] {
+    background: rgba(236,72,153,0.12);
+    border: 1px solid rgba(236,72,153,0.2);
+    color: #f472b6;
+}
+
+.source-badge:not([data-source]) {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.source-badge {
+    cursor: help;
+    position: relative;
+}
+
+/* SKELETON LOADING */
+.skeleton-card {
+    pointer-events: none;
+}
+
+.skeleton-line {
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 6px;
+}
+
+.skeleton-title {
+    height: 20px;
+    width: 75%;
+    margin-bottom: 16px;
+}
+
+.skeleton-company {
+    height: 14px;
+    width: 50%;
+    margin-bottom: 8px;
+}
+
+.skeleton-location {
+    height: 12px;
+    width: 35%;
+    margin-bottom: 20px;
+}
+
+.skeleton-tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.skeleton-tag {
+    height: 22px;
+    width: 50px;
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 6px;
+}
+
+.skeleton-footer {
+    height: 12px;
+    width: 40%;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* EMPTY STATE */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    margin-top: 8px;
+}
+
+/* FADE IN ANIMATION */
+.fade-in-up {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* LOAD MORE */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 40px;
+}
+
+.btn-load-more {
+    padding: 14px 48px;
+    font-size: 14px;
+}
+
+.btn-load-more:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* LOADING */
@@ -467,24 +613,6 @@ header p {
     background-clip: text;
 }
 
-/* PAGINATION */
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin: 20px 0 40px;
-}
-
-.pagination-info {
-    color: var(--text-muted);
-    font-size: 13px;
-    padding: 8px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-}
-
 /* FAVORITES */
 #favorites-section {
     margin-top: 50px;
@@ -515,4 +643,24 @@ footer {
     margin-top: 40px;
     position: relative;
     z-index: 1;
+}
+
+.footer-sources {
+    margin-bottom: 24px;
+}
+
+.footer-sources-title {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+}
+
+.footer-sources-list {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
