@@ -1,5 +1,14 @@
 # JobRadar — Sessão opencode
 
+## Skills
+- dotnet-patterns
+- csharp-testing
+- api-design
+- security-review
+- postgres-patterns
+- database-migrations
+- docker-patterns
+
 ## Stack
 - .NET 10 (net10.0)
 - Clean Architecture (Domain, Application, Infrastructure, API)
