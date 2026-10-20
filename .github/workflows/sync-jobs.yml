@@ -16,9 +16,17 @@ jobs:
           sleep 30
 
       - name: Sync Jobs
+        # O sync exige JWT. Configure o secret JOBRADAR_TOKEN (token de um usuário) no repositório.
+        env:
+          JOBRADAR_TOKEN: ${{ secrets.JOBRADAR_TOKEN }}
         run: |
+          if [ -z "$JOBRADAR_TOKEN" ]; then
+            echo "Secret JOBRADAR_TOKEN não configurado — sync pulado (o sync também roda sozinho na API)."
+            exit 0
+          fi
           RESULT=$(curl -s -X POST https://jobradar-api-rgcy.onrender.com/api/Jobs/sync \
-            -H "Content-Type: application/json")
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $JOBRADAR_TOKEN")
           echo "Resultado: $RESULT"
           
           IMPORTED=$(echo $RESULT | grep -o '"imported":[0-9]*' | grep -o '[0-9]*')

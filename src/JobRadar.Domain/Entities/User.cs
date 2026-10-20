@@ -15,11 +15,14 @@ public class User
 
     public static User CreateWithPassword(string name, string email, string passwordHash)
     {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Hash da senha é obrigatório.", nameof(passwordHash));
+
         return new User
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Email = email,
+            Name = NormalizeName(name),
+            Email = NormalizeEmail(email),
             PasswordHash = passwordHash,
             CreatedAt = DateTime.UtcNow
         };
@@ -27,13 +30,41 @@ public class User
 
     public static User CreateWithGoogle(string name, string email, string googleId)
     {
+        if (string.IsNullOrWhiteSpace(googleId))
+            throw new ArgumentException("GoogleId é obrigatório.", nameof(googleId));
+
         return new User
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Email = email,
-            GoogleId = googleId,
+            Name = NormalizeName(name),
+            Email = NormalizeEmail(email),
+            GoogleId = googleId.Trim(),
             CreatedAt = DateTime.UtcNow
         };
+    }
+
+    /// <summary>Vincula uma conta Google a um usuário que já existia (ex.: cadastro por email).</summary>
+    public void LinkGoogleAccount(string googleId)
+    {
+        if (string.IsNullOrWhiteSpace(googleId))
+            throw new ArgumentException("GoogleId é obrigatório.", nameof(googleId));
+
+        GoogleId = googleId.Trim();
+    }
+
+    public static string NormalizeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email é obrigatório.", nameof(email));
+
+        return email.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Nome é obrigatório.", nameof(name));
+
+        return name.Trim();
     }
 }

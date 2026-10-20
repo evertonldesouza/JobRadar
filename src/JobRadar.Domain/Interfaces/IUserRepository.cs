@@ -8,4 +8,5 @@ public interface IUserRepository
     Task<User?> GetByGoogleIdAsync(string googleId);
     Task<User?> GetByIdAsync(Guid id);
     Task AddAsync(User user);
+    Task UpdateAsync(User user);
 }
