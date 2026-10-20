@@ -34,8 +34,11 @@ public sealed class RequestLoggingMiddleware
             var level = isHealth ? LogLevel.Debug : LogLevel.Information;
             _logger.Log(level,
                 "HTTP {Method} {Path} respondeu {StatusCode} em {ElapsedMs} ms (CorrelationId: {CorrelationId})",
-                context.Request.Method, context.Request.Path, context.Response.StatusCode,
+                context.Request.Method, Sanitize(context.Request.Path.Value), context.Response.StatusCode,
                 stopwatch.ElapsedMilliseconds, correlationId);
         }
     }
+
+    private static string Sanitize(string? value) =>
+        (value ?? string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
 }

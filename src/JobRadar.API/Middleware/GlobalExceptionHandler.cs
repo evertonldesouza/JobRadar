@@ -33,9 +33,9 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         };
 
         if (status == HttpStatusCode.InternalServerError)
-            _logger.LogError(exception, "Erro interno não tratado em {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
+            _logger.LogError(exception, "Erro interno não tratado em {Method} {Path}", httpContext.Request.Method, Sanitize(httpContext.Request.Path.Value));
         else
-            _logger.LogWarning(exception, "{Title} em {Method} {Path}", title, httpContext.Request.Method, httpContext.Request.Path);
+            _logger.LogWarning(exception, "{Title} em {Method} {Path}", title, httpContext.Request.Method, Sanitize(httpContext.Request.Path.Value));
 
         var problem = new ProblemDetails
         {
@@ -60,4 +60,8 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
         return true;
     }
+
+    /// <summary>Remove quebras de linha de valores da requisição antes de logar (log injection).</summary>
+    private static string Sanitize(string? value) =>
+        (value ?? string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
 }
