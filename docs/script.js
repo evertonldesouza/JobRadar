@@ -1,11 +1,8 @@
 'use strict';
 
-/* Base da API: ?api=... na URL > localStorage > produção. */
-const API = (
-    new URLSearchParams(location.search).get('api') ||
-    localStorage.getItem('jobradar_api') ||
-    'https://jobradar-api-rgcy.onrender.com'
-).replace(/\/$/, '');
+/* Base da API (fixa por segurança: nunca aceite a URL da API via query/localStorage).
+   Para desenvolvimento local, troque esta constante para http://localhost:5225. */
+const API = 'https://jobradar-api-rgcy.onrender.com';
 
 const PAGE_SIZE = 20;
 let token = localStorage.getItem('jobradar_token');

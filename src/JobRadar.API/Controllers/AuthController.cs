@@ -38,7 +38,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var result = await _mediator.Send(new RegisterCommand(request.Name, request.Email, request.Password));
-        _logger.LogInformation("Novo usuário registrado: {Email}", result.Email);
+        _logger.LogInformation("Novo usuário registrado");
         return Ok(result);
     }
 
@@ -50,7 +50,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _mediator.Send(new LoginCommand(request.Email, request.Password));
-        _logger.LogInformation("Login realizado: {Email}", result.Email);
+        _logger.LogInformation("Login realizado");
         return Ok(result);
     }
 
@@ -94,14 +94,14 @@ public class AuthController : ControllerBase
             user = Domain.Entities.User.CreateWithGoogle(
                 string.IsNullOrWhiteSpace(name) ? email : name, email, googleId);
             await _userRepository.AddAsync(user);
-            _logger.LogInformation("Novo usuário via Google: {Email}", user.Email);
+            _logger.LogInformation("Novo usuário via Google: {UserId}", user.Id);
         }
         else if (!string.Equals(user.GoogleId, googleId, StringComparison.Ordinal))
         {
             // Conta criada por email/senha passa a aceitar login com Google.
             user.LinkGoogleAccount(googleId);
             await _userRepository.UpdateAsync(user);
-            _logger.LogInformation("Conta vinculada ao Google: {Email}", user.Email);
+            _logger.LogInformation("Conta vinculada ao Google: {UserId}", user.Id);
         }
 
         var token = _tokenService.GenerateToken(user);
