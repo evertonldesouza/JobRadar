@@ -14,14 +14,20 @@ public class JobAlert
 
     public static JobAlert Create(Guid userId, string? technology, string? location, string? source)
     {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("Usuário é obrigatório.", nameof(userId));
+
         return new JobAlert
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Technology = technology,
-            Location = location,
-            Source = source,
+            Technology = Normalize(technology),
+            Location = Normalize(location),
+            Source = Normalize(source),
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

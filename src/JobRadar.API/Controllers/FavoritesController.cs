@@ -1,8 +1,9 @@
+using JobRadar.API.Extensions;
+using JobRadar.Application.DTOs;
 using JobRadar.Application.UseCases.Favorites;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace JobRadar.API.Controllers;
 
@@ -21,36 +22,36 @@ public class FavoritesController : ControllerBase
         _logger = logger;
     }
 
-    private Guid GetUserId() =>
-        Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<Application.DTOs.JobDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(IEnumerable<JobDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetFavorites()
     {
-        var favorites = await _mediator.Send(new GetFavoritesQuery(GetUserId()));
+        var favorites = await _mediator.Send(new GetFavoritesQuery(this.User.GetUserId()));
         return Ok(favorites);
     }
 
-    [HttpPost("{jobId}")]
+    [HttpPost("{jobId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> AddFavorite(Guid jobId)
     {
-        await _mediator.Send(new AddFavoriteCommand(GetUserId(), jobId));
-        _logger.LogInformation("Favorito adicionado: User={UserId}, Job={JobId}", GetUserId(), jobId);
+        var userId = this.User.GetUserId();
+        await _mediator.Send(new AddFavoriteCommand(userId, jobId));
+        _logger.LogInformation("Favorito adicionado: User={UserId}, Job={JobId}", userId, jobId);
         return NoContent();
     }
 
-    [HttpDelete("{jobId}")]
+    [HttpDelete("{jobId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RemoveFavorite(Guid jobId)
     {
-        await _mediator.Send(new RemoveFavoriteCommand(GetUserId(), jobId));
-        _logger.LogInformation("Favorito removido: User={UserId}, Job={JobId}", GetUserId(), jobId);
+        var userId = this.User.GetUserId();
+        await _mediator.Send(new RemoveFavoriteCommand(userId, jobId));
+        _logger.LogInformation("Favorito removido: User={UserId}, Job={JobId}", userId, jobId);
         return NoContent();
     }
 }
