@@ -7,7 +7,11 @@ namespace JobRadar.Application.UseCases.Jobs;
 
 public static class JobsCache
 {
-    public static int Version { get; set; } = 0;
+    private static int _version;
+
+    public static int Version => Volatile.Read(ref _version);
+
+    public static void Invalidate() => Interlocked.Increment(ref _version);
 }
 
 public record GetJobsQuery(
@@ -18,7 +22,7 @@ public record GetJobsQuery(
     int PageSize = 20
 ) : IRequest<PagedResult<JobDto>>;
 
-public class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, PagedResult<JobDto>>
+public sealed class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, PagedResult<JobDto>>
 {
     private readonly IJobRepository _jobRepository;
     private readonly IMemoryCache _cache;
@@ -47,7 +51,7 @@ public class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, PagedResult<Job
         var items = jobs.Select(j => new JobDto(
             j.Id, j.Title, j.Company, j.Location,
             j.Url, j.PublishedAt, j.Technologies, j.Source
-        ));
+        )).ToList();
 
         var result = new PagedResult<JobDto>(items, request.Page, request.PageSize, totalCount);
 

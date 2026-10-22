@@ -1,11 +1,11 @@
 using FluentValidation;
-using JobRadar.Application.DTOs;
+using JobRadar.Application.UseCases.Auth;
 
 namespace JobRadar.Application.Validators;
 
-public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
-    public RegisterRequestValidator()
+    public RegisterCommandValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Nome é obrigatório.")
@@ -18,7 +18,9 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Senha é obrigatória.")
-            .MinimumLength(6).WithMessage("Senha deve ter no mínimo 6 caracteres.")
-            .MaximumLength(100).WithMessage("Senha deve ter no máximo 100 caracteres.");
+            .MinimumLength(8).WithMessage("Senha deve ter no mínimo 8 caracteres.")
+            .MaximumLength(100).WithMessage("Senha deve ter no máximo 100 caracteres.")
+            .Matches("[A-Za-z]").WithMessage("Senha deve conter ao menos uma letra.")
+            .Matches("[0-9]").WithMessage("Senha deve conter ao menos um número.");
     }
 }

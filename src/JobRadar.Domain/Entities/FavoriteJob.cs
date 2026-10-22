@@ -12,6 +12,11 @@ public class FavoriteJob
 
     public static FavoriteJob Create(Guid userId, Guid jobId)
     {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("Usuário é obrigatório.", nameof(userId));
+        if (jobId == Guid.Empty)
+            throw new ArgumentException("Vaga é obrigatória.", nameof(jobId));
+
         return new FavoriteJob
         {
             Id = Guid.NewGuid(),

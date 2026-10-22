@@ -1,12 +1,12 @@
-using JobRadar.Domain.Entities;
+using JobRadar.Application.DTOs;
 using JobRadar.Domain.Interfaces;
 using MediatR;
 
 namespace JobRadar.Application.UseCases.Alerts;
 
-public record GetAlertsQuery(Guid UserId) : IRequest<List<JobAlert>>;
+public record GetAlertsQuery(Guid UserId) : IRequest<List<AlertDto>>;
 
-public class GetAlertsQueryHandler : IRequestHandler<GetAlertsQuery, List<JobAlert>>
+public sealed class GetAlertsQueryHandler : IRequestHandler<GetAlertsQuery, List<AlertDto>>
 {
     private readonly IJobAlertRepository _alertRepository;
 
@@ -15,6 +15,9 @@ public class GetAlertsQueryHandler : IRequestHandler<GetAlertsQuery, List<JobAle
         _alertRepository = alertRepository;
     }
 
-    public async Task<List<JobAlert>> Handle(GetAlertsQuery request, CancellationToken cancellationToken) =>
-        await _alertRepository.GetByUserIdAsync(request.UserId);
+    public async Task<List<AlertDto>> Handle(GetAlertsQuery request, CancellationToken cancellationToken)
+    {
+        var alerts = await _alertRepository.GetByUserIdAsync(request.UserId);
+        return alerts.Select(a => new AlertDto(a.Id, a.UserId, a.Technology, a.Location, a.Source, a.CreatedAt)).ToList();
+    }
 }
