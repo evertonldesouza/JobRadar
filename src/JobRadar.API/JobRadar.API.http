@@ -1,6 +1,43 @@
-@JobRadar.API_HostAddress = http://localhost:5225
+@baseUrl = http://localhost:5225
+@token = cole-seu-jwt-aqui
 
-GET {{JobRadar.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
+### Health
+GET {{baseUrl}}/health/live
 ###
+GET {{baseUrl}}/health/ready
+
+### Listar vagas (filtros: technology, location, source, page, pageSize)
+GET {{baseUrl}}/api/Jobs?technology=react&page=1&pageSize=20
+
+### Fontes disponíveis
+GET {{baseUrl}}/api/Jobs/sources
+
+### Exportar CSV
+GET {{baseUrl}}/api/Jobs/export?technology=python
+
+### Registrar
+POST {{baseUrl}}/api/Auth/register
+Content-Type: application/json
+
+{ "name": "Seu Nome", "email": "voce@exemplo.com", "password": "senha-com-letras-e-123" }
+
+### Login
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{ "email": "voce@exemplo.com", "password": "senha-com-letras-e-123" }
+
+### Favoritos (requer JWT)
+GET {{baseUrl}}/api/Favorites
+Authorization: Bearer {{token}}
+
+### Criar alerta (requer JWT)
+POST {{baseUrl}}/api/Alerts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "technology": "React", "location": "Remoto", "source": null }
+
+### Sync manual (requer JWT)
+POST {{baseUrl}}/api/Jobs/sync
+Authorization: Bearer {{token}}

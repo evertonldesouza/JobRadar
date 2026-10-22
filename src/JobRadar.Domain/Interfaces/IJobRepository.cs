@@ -12,9 +12,13 @@ public interface IJobRepository
         int pageSize = 20);
     Task<Job?> GetByIdAsync(Guid id);
     Task<bool> ExistsByUrlAsync(string url);
-    Task AddRangeAsync(IEnumerable<Job> jobs);    
+    Task AddRangeAsync(IEnumerable<Job> jobs);
     Task<bool> ExistsByTitleAndCompanyAsync(string title, string company);
     Task<int> RemoveDuplicatesAsync();
 
+    /// <summary>Devolve, em uma única consulta, quais das URLs informadas já existem.</summary>
+    Task<IReadOnlyList<string>> GetExistingUrlsAsync(IReadOnlyCollection<string> urls, CancellationToken cancellationToken = default);
 
+    /// <summary>Devolve, em uma única consulta, as chaves título|empresa (minúsculas) já existentes.</summary>
+    Task<IReadOnlyList<string>> GetExistingDeduplicationKeysAsync(IReadOnlyCollection<string> titles, CancellationToken cancellationToken = default);
 }

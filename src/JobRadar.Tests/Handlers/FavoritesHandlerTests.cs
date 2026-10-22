@@ -19,7 +19,7 @@ public class FavoritesHandlerTests
     [Fact]
     public async Task AddFavorite_WithValidJob_AddsSuccessfully()
     {
-        var job = Job.Create("Dev", "Co", "Remote", "url", DateTime.UtcNow, ["C#"], "Test");
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/job", DateTime.UtcNow, ["C#"], "Test");
         _jobRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(job);
         _favRepo.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), It.IsAny<Guid>())).ReturnsAsync(false);
 
@@ -42,7 +42,7 @@ public class FavoritesHandlerTests
     [Fact]
     public async Task AddFavorite_AlreadyFavorited_ThrowsInvalidOperation()
     {
-        var job = Job.Create("Dev", "Co", "Remote", "url", DateTime.UtcNow, ["C#"], "Test");
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/job", DateTime.UtcNow, ["C#"], "Test");
         _jobRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(job);
         _favRepo.Setup(r => r.ExistsAsync(It.IsAny<Guid>(), It.IsAny<Guid>())).ReturnsAsync(true);
 
@@ -55,7 +55,7 @@ public class FavoritesHandlerTests
     public async Task GetFavorites_ReturnsUserFavorites()
     {
         var userId = Guid.NewGuid();
-        var job = Job.Create("Dev", "Co", "Remote", "url", DateTime.UtcNow, ["C#"], "Test");
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/job", DateTime.UtcNow, ["C#"], "Test");
         var fav = FavoriteJob.Create(userId, job.Id);
 
         var favField = typeof(FavoriteJob).GetField("<Job>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);

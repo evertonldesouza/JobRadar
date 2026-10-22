@@ -3,21 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JobRadar — Vagas Tech</title>
-    <link rel="stylesheet" href="style.css?v=20260523">
+    <title>JobRadar — Vagas de tecnologia em um só lugar</title>
+    <meta name="description" content="O JobRadar agrega vagas de tecnologia de múltiplas fontes, com filtros, favoritos e alertas personalizados.">
+    <meta name="theme-color" content="#080b12">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="JobRadar — Vagas Tech">
+    <meta property="og:description" content="Vagas de tecnologia de múltiplas fontes em um só lugar, com favoritos e alertas.">
+    <meta property="og:locale" content="pt_BR">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="style.css?v=20261020">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
 </head>
 <body>
+    <a class="skip-link" href="#vagas">Pular para as vagas</a>
+
     <header>
         <div class="container">
-            <div class="header-eyebrow">Atualizado diariamente</div>
+            <div class="header-eyebrow"><span aria-hidden="true"></span>Atualizado automaticamente</div>
             <h1>JobRadar</h1>
             <p>Vagas tech curadas de múltiplas fontes em um só lugar</p>
             <div class="header-actions">
                 <div id="auth-section">
-                    <button id="btn-login" class="btn-outline">
-                        <i class="fab fa-google"></i> Entrar com Google
+                    <button id="btn-login" class="btn-outline" type="button">
+                        <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Entrar / Criar conta
                     </button>
                 </div>
             </div>
@@ -25,17 +34,20 @@
     </header>
 
     <main class="container">
-        <div class="filters-wrapper">
+        <form class="filters-wrapper" id="filters-form" role="search" aria-label="Filtrar vagas">
             <div class="filter-input-wrapper">
-                <i class="fas fa-code"></i>
-                <input type="text" id="filter-tech" placeholder="Tecnologia (ex: python, react...)" />
+                <i class="fas fa-code" aria-hidden="true"></i>
+                <label class="sr-only" for="filter-tech">Tecnologia</label>
+                <input type="search" id="filter-tech" placeholder="Tecnologia (ex.: python, react...)" autocomplete="off">
             </div>
             <div class="filter-input-wrapper">
-                <i class="fas fa-map-marker-alt"></i>
-                <input type="text" id="filter-location" placeholder="Localização (ex: London, UK...)" />
+                <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                <label class="sr-only" for="filter-location">Localização</label>
+                <input type="search" id="filter-location" placeholder="Localização (ex.: Remoto, São Paulo...)" autocomplete="off">
             </div>
             <div class="filter-input-wrapper filter-source-wrapper">
-                <i class="fas fa-database"></i>
+                <i class="fas fa-database" aria-hidden="true"></i>
+                <label class="sr-only" for="filter-source">Fonte</label>
                 <select id="filter-source">
                     <option value="">Todas as fontes</option>
                     <option value="RemoteOK">RemoteOK</option>
@@ -45,38 +57,107 @@
                     <option value="Adzuna">Adzuna</option>
                 </select>
             </div>
-            <button id="btn-search" class="btn-primary">
-                <i class="fas fa-search"></i> Buscar
+            <button id="btn-search" class="btn-primary" type="submit">
+                <i class="fas fa-search" aria-hidden="true"></i> Buscar
             </button>
-        </div>
+            <button id="btn-clear" class="btn-outline" type="button">
+                <i class="fas fa-eraser" aria-hidden="true"></i> Limpar
+            </button>
+        </form>
 
-        <div id="jobs-grid" class="jobs-grid">
-            <div class="loading">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <p>Carregando vagas...</p>
+        <p id="job-counter" class="job-counter" role="status" aria-live="polite"></p>
+
+        <section id="vagas" aria-label="Lista de vagas">
+            <div id="jobs-grid" class="jobs-grid">
+                <div class="loading">
+                    <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                    <p>Carregando vagas...</p>
+                </div>
             </div>
-        </div>
+            <div id="load-more-container" class="load-more-container"></div>
+        </section>
 
-        <div id="favorites-section" style="display:none">
-            <h2><i class="fas fa-star"></i> Meus Favoritos</h2>
+        <section id="favorites-section" hidden aria-label="Meus favoritos">
+            <h2><i class="fas fa-star" aria-hidden="true"></i> Meus Favoritos</h2>
             <div id="favorites-grid" class="jobs-grid"></div>
-        </div>
+            <p id="favorites-empty" class="loading-sub" hidden>Você ainda não favoritou nenhuma vaga. Toque na estrela de um card para salvar aqui.</p>
+        </section>
+
+        <section id="alerts-section" hidden aria-label="Meus alertas de vagas">
+            <h2><i class="fas fa-bell" aria-hidden="true"></i> Meus Alertas</h2>
+            <p class="alerts-hint">Crie um alerta com os filtros atuais e seja avisado quando novas vagas compatíveis forem importadas.</p>
+            <form id="alert-form" class="alert-form">
+                <label> Tecnologia <input type="text" id="alert-tech" placeholder="Ex.: React" maxlength="100"></label>
+                <label> Localização <input type="text" id="alert-location" placeholder="Ex.: Remoto" maxlength="200"></label>
+                <label> Fonte
+                    <select id="alert-source">
+                        <option value="">Todas</option>
+                        <option value="RemoteOK">RemoteOK</option>
+                        <option value="Remotive">Remotive</option>
+                        <option value="CareerNest">CareerNest</option>
+                        <option value="JobsBase">JobsBase</option>
+                        <option value="Adzuna">Adzuna</option>
+                    </select>
+                </label>
+                <button class="btn-primary" type="submit"><i class="fas fa-plus" aria-hidden="true"></i> Criar alerta</button>
+            </form>
+            <ul id="alerts-list" class="alerts-list"></ul>
+        </section>
     </main>
 
     <footer>
-        <div class="footer-sources">
-            <span class="footer-sources-title">Fontes de vagas</span>
-            <div class="footer-sources-list">
-                <span class="source-badge" data-source="RemoteOK">RemoteOK</span>
-                <span class="source-badge" data-source="Remotive">Remotive</span>
-                <span class="source-badge" data-source="CareerNest">CareerNest</span>
-                <span class="source-badge" data-source="JobsBase">JobsBase</span>
-                <span class="source-badge" data-source="Adzuna">Adzuna</span>
+        <div class="container">
+            <div class="footer-sources">
+                <span class="footer-sources-title">Fontes de vagas</span>
+                <div class="footer-sources-list">
+                    <span class="source-badge" data-source="RemoteOK">RemoteOK</span>
+                    <span class="source-badge" data-source="Remotive">Remotive</span>
+                    <span class="source-badge" data-source="CareerNest">CareerNest</span>
+                    <span class="source-badge" data-source="JobsBase">JobsBase</span>
+                    <span class="source-badge" data-source="Adzuna">Adzuna</span>
+                </div>
             </div>
+            <p>
+                <a href="https://github.com/evertonldesouza/JobRadar" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+                Desenvolvido por <strong>Everton L. de Souza</strong> &copy; 2026
+            </p>
         </div>
-        <p>Desenvolvido por <strong>Everton L. de Souza</strong> &copy; 2026</p>
     </footer>
 
-    <script src="script.js?v=20260523"></script>
+    <dialog id="auth-dialog" aria-labelledby="auth-title">
+        <div class="auth-dialog-body">
+            <button class="auth-close" id="auth-close" type="button" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            <h2 id="auth-title">Acesse sua conta</h2>
+            <div class="auth-tabs" role="tablist" aria-label="Entrar ou criar conta">
+                <button type="button" role="tab" aria-selected="true" id="tab-login" class="auth-tab active">Entrar</button>
+                <button type="button" role="tab" aria-selected="false" id="tab-register" class="auth-tab">Criar conta</button>
+            </div>
+
+            <form id="form-login" class="auth-form">
+                <label>Email <input type="email" id="login-email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
+                <label>Senha <input type="password" id="login-password" required autocomplete="current-password" placeholder="Sua senha"></label>
+                <p class="auth-error" id="login-error" role="alert" hidden></p>
+                <button class="btn-primary" type="submit">Entrar</button>
+            </form>
+
+            <form id="form-register" class="auth-form" hidden>
+                <label>Nome <input type="text" id="register-name" required autocomplete="name" maxlength="200" placeholder="Seu nome"></label>
+                <label>Email <input type="email" id="register-email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
+                <label>Senha <input type="password" id="register-password" required autocomplete="new-password" minlength="8" placeholder="Mín. 8 caracteres, com letras e números"></label>
+                <p class="auth-error" id="register-error" role="alert" hidden></p>
+                <button class="btn-primary" type="submit">Criar conta</button>
+            </form>
+
+            <div class="auth-divider"><span>ou</span></div>
+            <button id="btn-google" class="btn-outline btn-google" type="button">
+                <i class="fab fa-google" aria-hidden="true"></i> Continuar com Google
+            </button>
+            <p class="auth-note">Ao continuar, você concorda em salvar favoritos e alertas na sua conta.</p>
+        </div>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <noscript><p style="text-align:center;padding:16px">O JobRadar precisa de JavaScript para carregar as vagas.</p></noscript>
+    <script src="script.js?v=20261020"></script>
 </body>
 </html>

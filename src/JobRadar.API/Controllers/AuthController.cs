@@ -1,14 +1,14 @@
+using System.Security.Claims;
+using JobRadar.Application.Abstractions;
 using JobRadar.Application.DTOs;
 using JobRadar.Application.UseCases.Auth;
-using JobRadar.Domain.Entities;
 using JobRadar.Domain.Interfaces;
-using JobRadar.Application.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace JobRadar.API.Controllers;
 
@@ -31,39 +31,42 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting("Auth")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var result = await _mediator.Send(new RegisterCommand(request.Name, request.Email, request.Password));
-        _logger.LogInformation("Novo usuário registrado: {Email}", request.Email);
+        _logger.LogInformation("Novo usuário registrado");
         return Ok(result);
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("Auth")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await _mediator.Send(new LoginCommand(request.Email, request.Password));
-        _logger.LogInformation("Login realizado: {Email}", request.Email);
+        _logger.LogInformation("Login realizado");
         return Ok(result);
     }
 
     [HttpGet("google")]
-    public IActionResult GoogleLogin([FromQuery] string? returnUrl = null)
+    public IActionResult GoogleLogin()
     {
         var properties = new AuthenticationProperties
         {
-            RedirectUri = Url.Action(nameof(GoogleCallback)),
-            Items = { { "returnUrl", returnUrl } }
+            RedirectUri = Url.Action(nameof(GoogleCallback))
         };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
 
     [HttpGet("google/callback")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleCallback()
     {
         var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -73,19 +76,32 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        var googleId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-        var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
-        var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
+        var googleId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
+        var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
+
+        if (string.IsNullOrWhiteSpace(googleId) || string.IsNullOrWhiteSpace(email))
+        {
+            _logger.LogWarning("Callback do Google sem identificador ou email");
+            return Unauthorized();
+        }
 
         var user = await _userRepository.GetByGoogleIdAsync(googleId)
                 ?? await _userRepository.GetByEmailAsync(email);
 
         if (user is null)
         {
-            var newUser = Domain.Entities.User.CreateWithGoogle(name, email, googleId);
-            await _userRepository.AddAsync(newUser);
-            user = newUser;
-            _logger.LogInformation("Novo usuário via Google: {Email}", email);
+            user = Domain.Entities.User.CreateWithGoogle(
+                string.IsNullOrWhiteSpace(name) ? email : name, email, googleId);
+            await _userRepository.AddAsync(user);
+            _logger.LogInformation("Novo usuário via Google: {UserId}", user.Id);
+        }
+        else if (!string.Equals(user.GoogleId, googleId, StringComparison.Ordinal))
+        {
+            // Conta criada por email/senha passa a aceitar login com Google.
+            user.LinkGoogleAccount(googleId);
+            await _userRepository.UpdateAsync(user);
+            _logger.LogInformation("Conta vinculada ao Google: {UserId}", user.Id);
         }
 
         var token = _tokenService.GenerateToken(user);

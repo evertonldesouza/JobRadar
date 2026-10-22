@@ -1,65 +1,49 @@
 using System.Text;
 using System.Threading.RateLimiting;
-using FluentValidation;
 using JobRadar.API.BackgroundServices;
+using JobRadar.API.Health;
 using JobRadar.API.Middleware;
-using JobRadar.Application.Abstractions;
-using JobRadar.Application.Behaviors;
-using JobRadar.Application.UseCases.Jobs;
-using JobRadar.Domain.Interfaces;
+using JobRadar.Application;
+using JobRadar.Infrastructure;
 using JobRadar.Infrastructure.Persistence;
-using JobRadar.Infrastructure.Persistence.Repositories;
-using JobRadar.Infrastructure.Services;
-using JobRadar.Infrastructure.Sources;
-using MediatR;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using Microsoft.AspNetCore.Authentication.Cookies;
-
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
-builder.Services.AddDataProtection()
-    .SetApplicationName("JobRadar")
-    .PersistKeysToDbContext<AppDbContext>();
+// ---------------------------------------------------------------- serviços
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddMemoryCache();
 
-builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
-builder.Services.AddScoped<IJobAlertRepository, JobAlertRepository>();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
-builder.Services.AddSingleton<IEmailService, MockEmailService>();
-
-builder.Services.AddHttpClient<RemoteOkSource>();
-builder.Services.AddHttpClient<AdzunaSource>();
-builder.Services.AddHttpClient<RemotiveSource>();
-builder.Services.AddHttpClient<CareerNestSource>();
-builder.Services.AddHttpClient<JobsBaseSource>();
-builder.Services.AddTransient<IJobSource, RemoteOkSource>();
-builder.Services.AddTransient<IJobSource, AdzunaSource>();
-builder.Services.AddTransient<IJobSource, RemotiveSource>();
-builder.Services.AddTransient<IJobSource, CareerNestSource>();
-builder.Services.AddTransient<IJobSource, JobsBaseSource>();
-
-builder.Services.AddMediatR(cfg =>
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    cfg.RegisterServicesFromAssembly(typeof(GetJobsQuery).Assembly);
-    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
-builder.Services.AddValidatorsFromAssembly(typeof(GetJobsQuery).Assembly);
+// Autenticação JWT (+ Google OAuth quando configurado)
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Secret não configurado ou muito curto (mínimo 32 caracteres). " +
+        "Defina via variável de ambiente Jwt__Secret ou User Secrets — nunca commite o segredo.");
+}
 
-var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 var authBuilder = builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -77,7 +61,8 @@ var authBuilder = builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        ClockSkew = TimeSpan.FromMinutes(2)
     };
 });
 
@@ -90,37 +75,72 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
     {
         options.ClientId = googleClientId;
         options.ClientSecret = googleClientSecret;
-        options.CallbackPath = "/signin-google"; 
+        options.CallbackPath = "/signin-google";
     });
 }
 
-builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-
 builder.Services.AddHostedService<JobsSyncBackgroundService>();
 
+// Rate limiting: política geral por IP + política estrita para autenticação.
 builder.Services.AddRateLimiter(options =>
 {
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        await ValueTask.CompletedTask;
+    };
+
     options.AddFixedWindowLimiter("Api", opt =>
     {
         opt.PermitLimit = 60;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueLimit = 0;
     });
-    options.RejectionStatusCode = 429;
+
+    options.AddPolicy("Auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
 });
 
+// CORS: origens explícitas por configuração; em desenvolvimento, libera para facilitar o uso local.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    {
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins);
+        else if (builder.Environment.IsDevelopment())
+            policy.AllowAnyOrigin();
+        // Em produção sem Cors:AllowedOrigins, nenhum Origin é autorizado (chamadas não-browser seguem funcionando).
+
+        policy.AllowAnyMethod().AllowAnyHeader();
+    });
 });
 
 var app = builder.Build();
 
-app.UseMiddleware<ExceptionMiddleware>();
+// ---------------------------------------------------------------- pipeline
+app.UseForwardedHeaders();
+app.UseExceptionHandler();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 
 using (var scope = app.Services.CreateScope())
 {
@@ -141,13 +161,16 @@ app.UseRateLimiter();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
 
-app.MapGet("/healthz", async (AppDbContext db) =>
-{
-    var dbOk = await db.Database.CanConnectAsync();
-    return dbOk ? Results.Ok(new { status = "healthy", database = "connected" })
-                : Results.StatusCode(503);
-});
+app.MapControllers().RequireRateLimiting("Api");
+
+// Health checks: liveness (processo vivo) x readiness (banco acessível).
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+// Compatibilidade com Render/workflows que já usam /healthz.
+app.MapHealthChecks("/healthz", new HealthCheckOptions { Predicate = _ => true });
 
 app.Run();
+
+// Permite testes de integração com WebApplicationFactory<Program>.
+public partial class Program;
