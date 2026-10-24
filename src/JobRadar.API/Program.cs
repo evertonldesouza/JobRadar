@@ -96,7 +96,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddFixedWindowLimiter("Api", opt =>
     {
-        opt.PermitLimit = 60;
+        opt.PermitLimit = builder.Environment.IsEnvironment("Testing") ? 1000 : 60;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueLimit = 0;
     });
@@ -106,7 +106,7 @@ builder.Services.AddRateLimiter(options =>
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = builder.Environment.IsEnvironment("Testing") ? 1000 : 10,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -144,7 +144,12 @@ if (!app.Environment.IsDevelopment())
 
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // PostgreSQL: aplica migrations. Provedores não-relacionais (testes) criam o schema direto.
+    if (db.Database.IsRelational())
+        db.Database.Migrate();
+    else
+        db.Database.EnsureCreated();
 }
 
 if (app.Environment.IsDevelopment())

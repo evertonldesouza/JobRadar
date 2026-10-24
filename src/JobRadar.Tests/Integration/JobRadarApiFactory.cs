@@ -1,0 +1,54 @@
+using JobRadar.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace JobRadar.Tests.Integration;
+
+/// <summary>
+/// Sobe a API real em memória (pipeline completo) com o PostgreSQL trocado
+/// por EF InMemory e sem o background service de sync.
+/// </summary>
+public sealed class JobRadarApiFactory : WebApplicationFactory<Program>
+{
+    private readonly string _databaseName = $"jobradar-tests-{Guid.NewGuid()}";
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Secret"] = "integration-tests-secret-com-mais-de-32-caracteres-0123456789",
+                ["Jwt:Issuer"] = "JobRadar",
+                ["Jwt:Audience"] = "JobRadar",
+                ["Frontend:BaseUrl"] = "https://example.com/"
+            });
+        });
+
+        builder.ConfigureServices(services =>
+        {
+            // Remove o registro do PostgreSQL (inclui options configuration do Npgsql).
+            var toRemove = services.Where(d =>
+                d.ServiceType == typeof(AppDbContext) ||
+                d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
+                (d.ServiceType.IsGenericType &&
+                 d.ServiceType.GenericTypeArguments.Contains(typeof(AppDbContext)))).ToList();
+            foreach (var descriptor in toRemove)
+                services.Remove(descriptor);
+
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseInMemoryDatabase(_databaseName));
+
+            // Sem sync automático durante os testes.
+            var hosted = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
+            foreach (var descriptor in hosted)
+                services.Remove(descriptor);
+        });
+    }
+}
