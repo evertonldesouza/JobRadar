@@ -4,6 +4,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/), versio
 
 ## [Não lançado]
 
+### Adicionado (sessão, email e testes)
+- Login com Google agora redireciona ao frontend com os tokens no fragmento da URL (antes respondia JSON no navegador e o login nunca concluía no site).
+- Refresh tokens rotativos com detecção de reuso, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me` e recuperação de senha por email (`forgot/reset-password`, token de 1h).
+- Envio real de email via SMTP (`Smtp:*`) para alertas e recuperação; sem SMTP configurado, mantém o mock de desenvolvimento.
+- Testes de integração (`WebApplicationFactory` + EF InMemory) e retry com backoff nas fontes externas (timeout de 30s por fonte).
+- Filtros de fonte/localização case-insensitive.
+
+
 ### Adicionado
 - Health checks `/health/live` e `/health/ready`; frontend com login/cadastro por email, alertas e toasts.
 - CI com cobertura, build Docker, CodeQL e Dependabot; `CONTRIBUTING.md`, `SECURITY.md`, licença MIT.

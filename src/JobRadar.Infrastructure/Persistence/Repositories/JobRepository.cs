@@ -30,10 +30,10 @@ public class JobRepository : IJobRepository
             query = query.Where(j => j.Technologies.Contains(technology.Trim()));
 
         if (!string.IsNullOrWhiteSpace(location))
-            query = query.Where(j => j.Location.Contains(location.Trim()));
+            query = query.Where(j => j.Location.ToLower().Contains(location.Trim().ToLower()));
 
         if (!string.IsNullOrWhiteSpace(source))
-            query = query.Where(j => j.Source == source.Trim());
+            query = query.Where(j => j.Source.ToLower() == source.Trim().ToLower());
 
         var totalCount = await query.CountAsync();
 
