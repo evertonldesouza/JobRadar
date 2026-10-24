@@ -471,11 +471,25 @@ $('filter-location').value = initialParams.get('loc') || '';
 $('filter-source').value = initialParams.get('source') || '';
 currentPage = Math.max(parseInt(initialParams.get('page') || '1', 10) || 1, 1);
 
-const tokenParam = initialParams.get('token');
-if (tokenParam) {
-    token = tokenParam;
-    localStorage.setItem('jobradar_token', tokenParam);
-    history.replaceState({}, '', location.pathname);
+// Retorno do login com Google: tokens chegam no fragmento (#token=...), que
+// não é enviado a servidores. Lemos, salvamos e limpamos a URL na hora.
+const fragmentParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+const redirectedToken = fragmentParams.get('token') || initialParams.get('token');
+if (fragmentParams.get('authError')) {
+    toast('Não foi possível entrar com o Google. Tente novamente ou use email e senha.');
+}
+if (redirectedToken) {
+    token = redirectedToken;
+    localStorage.setItem('jobradar_token', redirectedToken);
+    const redirectedRefresh = fragmentParams.get('refreshToken');
+    if (redirectedRefresh) localStorage.setItem('jobradar_refresh', redirectedRefresh);
+    toast('Login realizado com sucesso!');
+}
+if (location.hash || initialParams.has('token')) {
+    const clean = new URLSearchParams(location.search);
+    clean.delete('token');
+    const qs = clean.toString();
+    history.replaceState({}, '', location.pathname + (qs ? `?${qs}` : ''));
 }
 
 updateAuthSection();
