@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using JobRadar.Application.Abstractions;
+using JobRadar.Application.Common;
 using JobRadar.Application.DTOs;
 using JobRadar.Application.UseCases.Auth;
 using JobRadar.Domain.Interfaces;
@@ -21,14 +22,18 @@ public class AuthController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
     private readonly ILogger<AuthController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IMediator mediator, IUserRepository userRepository, ITokenService tokenService, ILogger<AuthController> logger)
+    public AuthController(IMediator mediator, IUserRepository userRepository, ITokenService tokenService, ILogger<AuthController> logger, IConfiguration configuration)
     {
         _mediator = mediator;
         _userRepository = userRepository;
         _tokenService = tokenService;
         _logger = logger;
+        _configuration = configuration;
     }
+
+    private string? FrontendBaseUrl => _configuration["Frontend:BaseUrl"];
 
     [HttpPost("register")]
     [EnableRateLimiting("Auth")]
@@ -66,6 +71,7 @@ public class AuthController : ControllerBase
 
     [HttpGet("google/callback")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status302Found)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleCallback()
     {
@@ -73,7 +79,8 @@ public class AuthController : ControllerBase
         if (!result.Succeeded)
         {
             _logger.LogWarning("Falha na autenticação Google");
-            return Unauthorized();
+            var errorRedirect = FrontendRedirect.BuildAuthRedirect(FrontendBaseUrl, null, error: "google");
+            return errorRedirect is not null ? Redirect(errorRedirect) : Unauthorized();
         }
 
         var googleId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -83,7 +90,8 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(googleId) || string.IsNullOrWhiteSpace(email))
         {
             _logger.LogWarning("Callback do Google sem identificador ou email");
-            return Unauthorized();
+            var errorRedirect = FrontendRedirect.BuildAuthRedirect(FrontendBaseUrl, null, error: "google");
+            return errorRedirect is not null ? Redirect(errorRedirect) : Unauthorized();
         }
 
         var user = await _userRepository.GetByGoogleIdAsync(googleId)
@@ -105,6 +113,12 @@ public class AuthController : ControllerBase
         }
 
         var token = _tokenService.GenerateToken(user);
-        return Ok(new AuthResponse(token, user.Name, user.Email));
+
+        // Navegador (fluxo do site): volta ao frontend com o token no fragmento da URL.
+        // Sem Frontend:BaseUrl configurado, mantém a resposta JSON para clientes de API.
+        var redirect = FrontendRedirect.BuildAuthRedirect(FrontendBaseUrl, token);
+        return redirect is not null
+            ? Redirect(redirect)
+            : Ok(new AuthResponse(token, user.Name, user.Email));
     }
 }
