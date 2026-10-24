@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<IJobAlertRepository, JobAlertRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<ITokenService, TokenService>();
         if (!string.IsNullOrWhiteSpace(configuration["Smtp:Host"]))

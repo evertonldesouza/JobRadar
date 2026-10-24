@@ -11,11 +11,13 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
 {
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
 
-    public LoginCommandHandler(IUserRepository userRepository, ITokenService tokenService)
+    public LoginCommandHandler(IUserRepository userRepository, ITokenService tokenService, IRefreshTokenRepository refreshTokenRepository)
     {
         _userRepository = userRepository;
         _tokenService = tokenService;
+        _refreshTokenRepository = refreshTokenRepository;
     }
 
     public async Task<AuthResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -28,7 +30,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Credenciais inválidas.");
 
-        var token = _tokenService.GenerateToken(user);
-        return new AuthResponse(token, user.Name, user.Email);
+        return await AuthSession.IssueAsync(user, _tokenService, _refreshTokenRepository);
     }
 }
