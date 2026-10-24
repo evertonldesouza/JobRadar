@@ -12,11 +12,13 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
 {
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
 
-    public RegisterCommandHandler(IUserRepository userRepository, ITokenService tokenService)
+    public RegisterCommandHandler(IUserRepository userRepository, ITokenService tokenService, IRefreshTokenRepository refreshTokenRepository)
     {
         _userRepository = userRepository;
         _tokenService = tokenService;
+        _refreshTokenRepository = refreshTokenRepository;
     }
 
     public async Task<AuthResponse> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -30,7 +32,6 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
 
         await _userRepository.AddAsync(user);
 
-        var token = _tokenService.GenerateToken(user);
-        return new AuthResponse(token, user.Name, user.Email);
+        return await AuthSession.IssueAsync(user, _tokenService, _refreshTokenRepository);
     }
 }

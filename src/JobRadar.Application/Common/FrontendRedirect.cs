@@ -32,4 +32,18 @@ public static class FrontendRedirect
 
         return $"{baseUrl}#{fragment}";
     }
+
+    /// <summary>Link de recuperação de senha enviado por email (token no fragmento).</summary>
+    public static string? BuildPasswordResetUrl(string? frontendBaseUrl, string resetToken)
+    {
+        if (string.IsNullOrWhiteSpace(frontendBaseUrl) || string.IsNullOrWhiteSpace(resetToken))
+            return null;
+
+        if (!Uri.TryCreate(frontendBaseUrl.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            return null;
+
+        var baseUrl = frontendBaseUrl.Trim().TrimEnd('/') + "/";
+        return $"{baseUrl}#resetToken={Uri.EscapeDataString(resetToken)}";
+    }
 }

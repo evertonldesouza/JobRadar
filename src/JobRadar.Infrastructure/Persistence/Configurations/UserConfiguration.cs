@@ -13,6 +13,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Email).IsRequired().HasMaxLength(300);
         builder.HasIndex(u => u.Email).IsUnique();
         builder.Property(u => u.GoogleId).HasMaxLength(200);
+        builder.Property(u => u.PasswordResetTokenHash).HasMaxLength(200);
         builder.HasMany(u => u.Favorites)
             .WithOne()
             .HasForeignKey(f => f.UserId);
