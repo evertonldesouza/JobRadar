@@ -28,7 +28,10 @@ public static class DependencyInjection
         services.AddScoped<IJobAlertRepository, JobAlertRepository>();
 
         services.AddScoped<ITokenService, TokenService>();
-        services.AddSingleton<IEmailService, MockEmailService>();
+        if (!string.IsNullOrWhiteSpace(configuration["Smtp:Host"]))
+            services.AddSingleton<IEmailService, SmtpEmailService>();
+        else
+            services.AddSingleton<IEmailService, MockEmailService>();
 
         services.AddHttpClient<RemoteOkSource>();
         services.AddHttpClient<AdzunaSource>();
