@@ -1,7 +1,8 @@
 name: Diagnóstico (temporário)
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [arena/294e7e9d-jobradar]
 
 permissions:
   contents: read
