@@ -23,4 +23,11 @@ public class MockEmailService : IEmailService
 
         return Task.CompletedTask;
     }
+
+    public Task SendPasswordResetAsync(User user, string resetUrl)
+    {
+        // Nunca registre o token/link completo (nem em dev). Configure Smtp:* para testar o fluxo real.
+        _logger.LogInformation(" [MockEmail] Recuperação de senha solicitada para o usuário {UserId} (SMTP não configurado)", user.Id);
+        return Task.CompletedTask;
+    }
 }

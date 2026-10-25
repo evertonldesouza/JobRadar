@@ -122,6 +122,8 @@ Copie `.env.example` para `.env` (Docker) ou use variáveis de ambiente/User Sec
 | `Authentication__Google__ClientId/Secret` | OAuth Google (sem isso, o botão Google fica inativo) | |
 | `Adzuna__AppId` / `Adzuna__AppKey` | Fonte Adzuna (as demais fontes não precisam de chave) | |
 | `Sync__IntervalHours` / `Sync__InitialDelayMinutes` | Periodicidade do sync automático (padrão: 1h / 1min) | |
+| `Frontend__BaseUrl` | URL do site (redirect pós-Google e link de recuperação) | |
+| `Smtp__Host/Port/User/Password/From` | Envio real de email; sem `Host`, usa o mock de dev | |
 
 ## API (principais endpoints)
 
@@ -133,7 +135,11 @@ Copie `.env.example` para `.env` (Docker) ou use variáveis de ambiente/User Sec
 | `POST` | `/api/jobs/sync` | ✅ JWT | Importa novas vagas |
 | `DELETE` | `/api/jobs/duplicates` | ✅ JWT | Remove duplicatas |
 | `POST` | `/api/auth/register` · `/api/auth/login` | — | Conta com email/senha (senha: 8+, letras e números) |
-| `GET` | `/api/auth/google` | — | Inicia OAuth Google |
+| `POST` | `/api/auth/refresh` | — | Renova o access token (refresh rotativo, com detecção de reuso) |
+| `POST` | `/api/auth/logout` | ✅ JWT | Revoga o refresh token da sessão |
+| `GET` | `/api/auth/me` | ✅ JWT | Perfil do usuário logado |
+| `POST` | `/api/auth/forgot-password` · `/api/auth/reset-password` | — | Recuperação de senha por email (link de 1h) |
+| `GET` | `/api/auth/google` | — | OAuth Google (callback redireciona ao frontend com os tokens) |
 | `GET/POST/DELETE` | `/api/favorites[/{jobId}]` | ✅ JWT | Favoritos do usuário |
 | `GET/POST/DELETE` | `/api/alerts[/{id}]` | ✅ JWT | Alertas do usuário |
 

@@ -12,6 +12,7 @@ public class AppDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<User> Users => Set<User>();
     public DbSet<FavoriteJob> FavoriteJobs => Set<FavoriteJob>();
     public DbSet<JobAlert> JobAlerts => Set<JobAlert>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
