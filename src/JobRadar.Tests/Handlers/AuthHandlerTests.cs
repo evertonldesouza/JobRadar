@@ -10,6 +10,7 @@ public class AuthHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepo;
     private readonly Mock<ITokenService> _tokenService;
+    private readonly Mock<IRefreshTokenRepository> _refreshRepo;
     private readonly RegisterCommandHandler _registerHandler;
     private readonly LoginCommandHandler _loginHandler;
 
@@ -17,8 +18,10 @@ public class AuthHandlerTests
     {
         _userRepo = new Mock<IUserRepository>();
         _tokenService = new Mock<ITokenService>();
-        _registerHandler = new RegisterCommandHandler(_userRepo.Object, _tokenService.Object);
-        _loginHandler = new LoginCommandHandler(_userRepo.Object, _tokenService.Object);
+        _refreshRepo = new Mock<IRefreshTokenRepository>();
+        _tokenService.Setup(t => t.GenerateRefreshToken()).Returns("fake-refresh");
+        _registerHandler = new RegisterCommandHandler(_userRepo.Object, _tokenService.Object, _refreshRepo.Object);
+        _loginHandler = new LoginCommandHandler(_userRepo.Object, _tokenService.Object, _refreshRepo.Object);
     }
 
     [Fact]
@@ -32,6 +35,7 @@ public class AuthHandlerTests
         Assert.Equal("Test", result.Name);
         Assert.Equal("test@email.com", result.Email);
         Assert.Equal("fake-token", result.Token);
+        Assert.Equal("fake-refresh", result.RefreshToken);
     }
 
     [Fact]

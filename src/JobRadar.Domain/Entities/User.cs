@@ -7,9 +7,12 @@ public class User
     public string Email { get; private set; } = string.Empty;
     public string? PasswordHash { get; private set; }
     public string? GoogleId { get; private set; }
+    public string? PasswordResetTokenHash { get; private set; }
+    public DateTime? PasswordResetTokenExpiresAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public List<FavoriteJob> Favorites { get; private set; } = [];
     public List<JobAlert> Alerts { get; private set; } = [];
+    public List<RefreshToken> RefreshTokens { get; private set; } = [];
 
     protected User() { }
 
@@ -42,6 +45,37 @@ public class User
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    /// <summary>Define uma nova senha (hash BCrypt) — cadastro, reset ou troca.</summary>
+    public void SetPasswordHash(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Hash da senha é obrigatório.", nameof(passwordHash));
+
+        PasswordHash = passwordHash;
+        ClearPasswordResetToken();
+    }
+
+    /// <summary>Registra um pedido de recuperação (apenas o hash do token é persistido).</summary>
+    public void RequestPasswordReset(string tokenHash, DateTime expiresAt)
+    {
+        if (string.IsNullOrWhiteSpace(tokenHash))
+            throw new ArgumentException("Hash do token é obrigatório.", nameof(tokenHash));
+
+        PasswordResetTokenHash = tokenHash;
+        PasswordResetTokenExpiresAt = DateTime.SpecifyKind(expiresAt, DateTimeKind.Utc);
+    }
+
+    public void ClearPasswordResetToken()
+    {
+        PasswordResetTokenHash = null;
+        PasswordResetTokenExpiresAt = null;
+    }
+
+    public bool HasValidPasswordResetToken =>
+        PasswordResetTokenHash is not null &&
+        PasswordResetTokenExpiresAt is not null &&
+        PasswordResetTokenExpiresAt > DateTime.UtcNow;
 
     /// <summary>Vincula uma conta Google a um usuário que já existia (ex.: cadastro por email).</summary>
     public void LinkGoogleAccount(string googleId)

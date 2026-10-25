@@ -766,3 +766,9 @@ footer a:hover { color: var(--green); }
     .alert-form, .alert-form label { width: 100%; }
     header { padding: 44px 0 36px; }
 }
+
+.auth-link {
+    background: none; border: 0; color: var(--purple); cursor: pointer;
+    font: inherit; font-size: 13px; padding: 4px; text-decoration: underline;
+}
+.auth-link:hover { color: var(--green); }

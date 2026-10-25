@@ -6,6 +6,7 @@ const API = 'https://jobradar-api-rgcy.onrender.com';
 
 const PAGE_SIZE = 20;
 let token = localStorage.getItem('jobradar_token');
+let refreshToken = localStorage.getItem('jobradar_refresh');
 let userName = localStorage.getItem('jobradar_user') || '';
 let favorites = [];
 let currentPage = 1;
@@ -40,10 +41,8 @@ function isTokenExpired(jwt) {
     } catch { return true; }
 }
 
-if (token && isTokenExpired(token)) {
-    token = null;
-    localStorage.removeItem('jobradar_token');
-}
+// Access expirado não encerra a sessão: tentamos renovar com o refresh token na inicialização.
+if (token && isTokenExpired(token)) token = null;
 
 function fetchWithTimeout(url, ms, options = {}) {
     const ctrl = new AbortController();
@@ -258,11 +257,15 @@ async function applyJobsPage(data, append) {
 }
 
 /* ---------- favoritos ---------- */
-async function fetchFavorites() {
+async function fetchFavorites(retried = false) {
     if (!token) return;
     try {
         const res = await fetch(`${API}/api/Favorites`, { headers: authHeaders() });
-        if (res.status === 401) { logout('Sua sessão expirou. Entre novamente.'); return; }
+        if (res.status === 401) {
+            if (!retried && await tryRefresh()) return fetchFavorites(true);
+            logout('Sua sessão expirou. Entre novamente.');
+            return;
+        }
         if (!res.ok) return;
         const jobs = await res.json();
         favorites = jobs.map((job) => job.id);
@@ -330,9 +333,27 @@ async function fetchAlerts() {
 /* ---------- autenticação ---------- */
 function setSession(data) {
     token = data.token;
-    userName = data.name || '';
+    refreshToken = data.refreshToken || refreshToken;
+    userName = data.name || userName || '';
     localStorage.setItem('jobradar_token', token);
+    if (refreshToken) localStorage.setItem('jobradar_refresh', refreshToken);
     localStorage.setItem('jobradar_user', userName);
+}
+
+/** Renova o access token usando o refresh token (rotação no servidor). */
+async function tryRefresh() {
+    const stored = refreshToken || localStorage.getItem('jobradar_refresh');
+    if (!stored) return false;
+    try {
+        const res = await fetch(`${API}/api/Auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: stored })
+        });
+        if (!res.ok) return false;
+        setSession(await res.json());
+        return true;
+    } catch { return false; }
 }
 
 function updateAuthSection() {
@@ -357,15 +378,29 @@ function updateAuthSection() {
     }
 }
 
-function logout(message) {
+async function logout(message) {
+    const access = token;
+    const refresh = refreshToken;
     token = null;
+    refreshToken = null;
     userName = '';
     favorites = [];
     localStorage.removeItem('jobradar_token');
+    localStorage.removeItem('jobradar_refresh');
     localStorage.removeItem('jobradar_user');
     updateAuthSection();
     if (message) toast(message);
     fetchJobs(false);
+
+    if (access) {
+        try {
+            await fetch(`${API}/api/Auth/logout`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${access}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken: refresh })
+            });
+        } catch { /* sessão local já encerrada */ }
+    }
 }
 
 function openAuthDialog() {
@@ -380,14 +415,20 @@ function closeAuthDialog() {
     else dialog.removeAttribute('open');
 }
 
-function showAuthTab(register) {
-    $('form-login').hidden = register;
-    $('form-register').hidden = !register;
-    $('tab-login').classList.toggle('active', !register);
-    $('tab-register').classList.toggle('active', register);
-    $('tab-login').setAttribute('aria-selected', String(!register));
-    $('tab-register').setAttribute('aria-selected', String(register));
+function showAuthForm(name) {
+    ['form-login', 'form-register', 'form-forgot', 'form-reset'].forEach((id) => { $(id).hidden = id !== `form-${name}`; });
+    const isTab = name === 'login' || name === 'register';
+    $('tab-login').classList.toggle('active', name === 'login');
+    $('tab-register').classList.toggle('active', name === 'register');
+    $('tab-login').setAttribute('aria-selected', String(name === 'login'));
+    $('tab-register').setAttribute('aria-selected', String(name === 'register'));
+    document.querySelector('.auth-tabs').style.display = isTab ? '' : 'none';
+    $('auth-title').textContent = { login: 'Acesse sua conta', register: 'Crie sua conta', forgot: 'Recuperar senha', reset: 'Criar nova senha' }[name];
 }
+
+function showAuthTab(register) { showAuthForm(register ? 'register' : 'login'); }
+
+let pendingResetToken = null;
 
 async function submitAuth(formId, errorId, path, payload) {
     const errorBox = $(errorId);
@@ -440,6 +481,49 @@ $('form-login').addEventListener('submit', (event) => {
         email: $('login-email').value.trim(), password: $('login-password').value
     });
 });
+$('link-forgot').addEventListener('click', () => showAuthForm('forgot'));
+$('link-back-login').addEventListener('click', () => showAuthForm('login'));
+$('form-forgot').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = $('forgot-error');
+    errorBox.hidden = true;
+    try {
+        const res = await fetch(`${API}/api/Auth/forgot-password`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: $('forgot-email').value.trim() })
+        });
+        if (!res.ok && res.status !== 204) throw new Error(await readError(res));
+        closeAuthDialog();
+        toast('Se o email tiver conta, enviamos um link de recuperação. Confira sua caixa de entrada.');
+    } catch (err) {
+        errorBox.textContent = err.message || 'Não foi possível enviar. Tente novamente.';
+        errorBox.hidden = false;
+    }
+});
+$('form-reset').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = $('reset-error');
+    errorBox.hidden = true;
+    try {
+        const res = await fetch(`${API}/api/Auth/reset-password`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: $('reset-email').value.trim(),
+                token: pendingResetToken,
+                newPassword: $('reset-password').value
+            })
+        });
+        if (!res.ok && res.status !== 204) throw new Error(await readError(res));
+        pendingResetToken = null;
+        closeAuthDialog();
+        toast('Senha redefinida! Entre com a nova senha.');
+        openAuthDialog();
+        showAuthForm('login');
+    } catch (err) {
+        errorBox.textContent = err.message || 'Não foi possível redefinir. Solicite um novo link.';
+        errorBox.hidden = false;
+    }
+});
 $('form-register').addEventListener('submit', (event) => {
     event.preventDefault();
     submitAuth('form-register', 'register-error', '/api/Auth/register', {
@@ -471,13 +555,39 @@ $('filter-location').value = initialParams.get('loc') || '';
 $('filter-source').value = initialParams.get('source') || '';
 currentPage = Math.max(parseInt(initialParams.get('page') || '1', 10) || 1, 1);
 
-const tokenParam = initialParams.get('token');
-if (tokenParam) {
-    token = tokenParam;
-    localStorage.setItem('jobradar_token', tokenParam);
-    history.replaceState({}, '', location.pathname);
+// Retorno do login com Google: tokens chegam no fragmento (#token=...), que
+// não é enviado a servidores. Lemos, salvamos e limpamos a URL na hora.
+const fragmentParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+const redirectedToken = fragmentParams.get('token') || initialParams.get('token');
+if (fragmentParams.get('authError')) {
+    toast('Não foi possível entrar com o Google. Tente novamente ou use email e senha.');
+}
+if (redirectedToken) {
+    token = redirectedToken;
+    localStorage.setItem('jobradar_token', redirectedToken);
+    const redirectedRefresh = fragmentParams.get('refreshToken');
+    if (redirectedRefresh) { refreshToken = redirectedRefresh; localStorage.setItem('jobradar_refresh', redirectedRefresh); }
+    toast('Login realizado com sucesso!');
+}
+const resetTokenParam = fragmentParams.get('resetToken');
+if (resetTokenParam) pendingResetToken = resetTokenParam;
+if (location.hash || initialParams.has('token')) {
+    const clean = new URLSearchParams(location.search);
+    clean.delete('token');
+    const qs = clean.toString();
+    history.replaceState({}, '', location.pathname + (qs ? `?${qs}` : ''));
 }
 
-updateAuthSection();
-if (token) { fetchFavorites(); fetchAlerts(); }
-fetchJobs(false);
+(async () => {
+    if (!token && (refreshToken || localStorage.getItem('jobradar_refresh'))) {
+        await tryRefresh();
+    }
+    updateAuthSection();
+    if (resetTokenParam) {
+        openAuthDialog();
+        showAuthForm('reset');
+        toast('Crie sua nova senha para concluir a recuperação.');
+    }
+    if (token) { fetchFavorites(); fetchAlerts(); }
+    fetchJobs(false);
+})();

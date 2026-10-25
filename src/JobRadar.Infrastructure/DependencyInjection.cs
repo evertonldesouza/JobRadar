@@ -1,5 +1,6 @@
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Interfaces;
+using JobRadar.Infrastructure.Http;
 using JobRadar.Infrastructure.Persistence;
 using JobRadar.Infrastructure.Persistence.Repositories;
 using JobRadar.Infrastructure.Services;
@@ -26,15 +27,25 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<IJobAlertRepository, JobAlertRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<ITokenService, TokenService>();
-        services.AddSingleton<IEmailService, MockEmailService>();
+        if (!string.IsNullOrWhiteSpace(configuration["Smtp:Host"]))
+            services.AddSingleton<IEmailService, SmtpEmailService>();
+        else
+            services.AddSingleton<IEmailService, MockEmailService>();
 
-        services.AddHttpClient<RemoteOkSource>();
-        services.AddHttpClient<AdzunaSource>();
-        services.AddHttpClient<RemotiveSource>();
-        services.AddHttpClient<CareerNestSource>();
-        services.AddHttpClient<JobsBaseSource>();
+        services.AddTransient<ResilientRetryHandler>();
+        services.AddHttpClient<RemoteOkSource>(c => c.Timeout = TimeSpan.FromSeconds(30))
+            .AddHttpMessageHandler<ResilientRetryHandler>();
+        services.AddHttpClient<AdzunaSource>(c => c.Timeout = TimeSpan.FromSeconds(30))
+            .AddHttpMessageHandler<ResilientRetryHandler>();
+        services.AddHttpClient<RemotiveSource>(c => c.Timeout = TimeSpan.FromSeconds(30))
+            .AddHttpMessageHandler<ResilientRetryHandler>();
+        services.AddHttpClient<CareerNestSource>(c => c.Timeout = TimeSpan.FromSeconds(30))
+            .AddHttpMessageHandler<ResilientRetryHandler>();
+        services.AddHttpClient<JobsBaseSource>(c => c.Timeout = TimeSpan.FromSeconds(30))
+            .AddHttpMessageHandler<ResilientRetryHandler>();
         services.AddTransient<IJobSource, RemoteOkSource>();
         services.AddTransient<IJobSource, AdzunaSource>();
         services.AddTransient<IJobSource, RemotiveSource>();

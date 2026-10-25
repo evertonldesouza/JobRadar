@@ -34,6 +34,12 @@ services:
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
       Adzuna__AppId: ${ADZUNA_APP_ID:-}
       Adzuna__AppKey: ${ADZUNA_APP_KEY:-}
+      Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:5500/}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__From: ${SMTP_FROM:-}
     ports:
       - "${API_PORT:-8080}:8080"
 
