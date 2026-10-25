@@ -29,3 +29,4 @@ jobs:
           git add diag-output.txt
           git commit -m "diag: saída dos testes [skip ci]" || echo "sem mudanças"
           git push origin HEAD:arena/294e7e9d-jobradar
+# diag v3
