@@ -2,7 +2,6 @@ using JobRadar.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -20,16 +19,13 @@ public sealed class JobRadarApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
 
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Jwt:Secret"] = "integration-tests-secret-com-mais-de-32-caracteres-0123456789",
-                ["Jwt:Issuer"] = "JobRadar",
-                ["Jwt:Audience"] = "JobRadar",
-                ["Frontend:BaseUrl"] = "https://example.com/"
-            });
-        });
+        // UseSetting é o canal confiável para injetar configuração em APIs de
+        // minimal hosting via WebApplicationFactory (vai para o host e daí
+        // para o WebApplicationBuilder, antes de qualquer leitura de config).
+        builder.UseSetting("Jwt:Secret", "integration-tests-secret-com-mais-de-32-caracteres-0123456789");
+        builder.UseSetting("Jwt:Issuer", "JobRadar");
+        builder.UseSetting("Jwt:Audience", "JobRadar");
+        builder.UseSetting("Frontend:BaseUrl", "https://example.com/");
 
         builder.ConfigureServices(services =>
         {
