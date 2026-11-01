@@ -1,5 +1,6 @@
 using JobRadar.Application.UseCases.Alerts;
 using JobRadar.Application.UseCases.Auth;
+using JobRadar.Application.UseCases.Favorites;
 using JobRadar.Application.UseCases.Jobs;
 using JobRadar.Application.Validators;
 
@@ -56,5 +57,28 @@ public class ValidatorsTests
         var result = validator.Validate(new CreateAlertCommand(Guid.NewGuid(), new string('x', 101), null, null));
 
         Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public void MergeFavorites_WithTooManyIds_IsInvalid()
+    {
+        var ids = Enumerable.Range(0, MergeFavoritesCommandValidator.MaxFavoritesPerMerge + 1)
+            .Select(_ => Guid.NewGuid())
+            .ToList();
+
+        var result = new MergeFavoritesCommandValidator()
+            .Validate(new MergeFavoritesCommand(Guid.NewGuid(), ids));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(MergeFavoritesCommand.JobIds));
+    }
+
+    [Fact]
+    public void MergeFavorites_WithValidPayload_IsValid()
+    {
+        var result = new MergeFavoritesCommandValidator()
+            .Validate(new MergeFavoritesCommand(Guid.NewGuid(), [Guid.NewGuid(), Guid.NewGuid()]));
+
+        Assert.True(result.IsValid);
     }
 }

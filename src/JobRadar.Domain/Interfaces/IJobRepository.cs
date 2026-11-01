@@ -16,6 +16,9 @@ public interface IJobRepository
     Task<bool> ExistsByTitleAndCompanyAsync(string title, string company);
     Task<int> RemoveDuplicatesAsync();
 
+    /// <summary>Devolve, em uma única consulta, quais dos ids informados existem.</summary>
+    Task<IReadOnlyList<Guid>> GetExistingIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
+
     /// <summary>Devolve, em uma única consulta, quais das URLs informadas já existem.</summary>
     Task<IReadOnlyList<string>> GetExistingUrlsAsync(IReadOnlyCollection<string> urls, CancellationToken cancellationToken = default);
 
