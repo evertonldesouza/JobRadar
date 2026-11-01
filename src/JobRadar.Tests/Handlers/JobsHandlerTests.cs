@@ -110,4 +110,31 @@ public class JobsHandlerTests
         Assert.Equal(1, result);
         repo.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Job>>()), Times.Once);
     }
+
+    [Fact]
+    public async Task GetJobById_WithExistingJob_ReturnsDto()
+    {
+        var job = Job.Create("Dev Backend", "Co", "Remote", "https://example.com/job", DateTime.UtcNow, ["C#"], "Test");
+        var repo = new Mock<IJobRepository>();
+        repo.Setup(r => r.GetByIdAsync(job.Id)).ReturnsAsync(job);
+
+        var handler = new GetJobByIdQueryHandler(repo.Object);
+        var result = await handler.Handle(new GetJobByIdQuery(job.Id), default);
+
+        Assert.Equal(job.Id, result.Id);
+        Assert.Equal("Dev Backend", result.Title);
+        Assert.Equal("Test", result.Source);
+    }
+
+    [Fact]
+    public async Task GetJobById_WithUnknownJob_ThrowsKeyNotFound()
+    {
+        var repo = new Mock<IJobRepository>();
+        repo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((Job?)null);
+
+        var handler = new GetJobByIdQueryHandler(repo.Object);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            handler.Handle(new GetJobByIdQuery(Guid.NewGuid()), default));
+    }
 }

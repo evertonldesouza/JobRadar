@@ -35,7 +35,14 @@ public sealed class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, PagedRes
 
     public async Task<PagedResult<JobDto>> Handle(GetJobsQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"jobs_v{JobsCache.Version}_{request.Technology}_{request.Location}_{request.Source}_{request.Page}_{request.PageSize}";
+        // Chave normalizada (trim + minúsculas) para aproveitar cache entre variações de caixa.
+        var cacheKey = string.Join('|',
+            "jobs_v" + JobsCache.Version,
+            request.Technology?.Trim().ToLowerInvariant(),
+            request.Location?.Trim().ToLowerInvariant(),
+            request.Source?.Trim().ToLowerInvariant(),
+            request.Page,
+            request.PageSize);
 
         if (_cache.TryGetValue(cacheKey, out PagedResult<JobDto>? cached))
             return cached!;
@@ -48,10 +55,7 @@ public sealed class GetJobsQueryHandler : IRequestHandler<GetJobsQuery, PagedRes
             request.PageSize
         );
 
-        var items = jobs.Select(j => new JobDto(
-            j.Id, j.Title, j.Company, j.Location,
-            j.Url, j.PublishedAt, j.Technologies, j.Source
-        )).ToList();
+        var items = jobs.Select(JobDto.FromJob).ToList();
 
         var result = new PagedResult<JobDto>(items, request.Page, request.PageSize, totalCount);
 

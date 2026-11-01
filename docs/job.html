@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes da vaga — JobRadar</title>
+    <meta name="description" content="Detalhes da vaga: empresa, localização, tecnologias e link para se candidatar. Agregado pelo JobRadar.">
+    <meta name="theme-color" content="#080b12">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Detalhes da vaga — JobRadar">
+    <meta property="og:description" content="Detalhes da vaga: empresa, localização, tecnologias e link para se candidatar.">
+    <meta property="og:locale" content="pt_BR">
+    <meta name="twitter:card" content="summary">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="style.css?v=20261101">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+</head>
+<body>
+    <a class="skip-link" href="#vaga">Pular para os detalhes da vaga</a>
+
+    <header class="detail-topbar">
+        <div class="container detail-topbar-inner">
+            <a class="detail-brand" href="index.html">
+                <i class="fas fa-satellite-dish" aria-hidden="true"></i> JobRadar
+            </a>
+            <nav class="detail-nav" aria-label="Navegação principal">
+                <a class="btn-outline" href="index.html">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> Todas as vagas
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" id="vaga">
+        <nav class="breadcrumb" aria-label="Você está em">
+            <a href="index.html">Início</a>
+            <span aria-hidden="true">/</span>
+            <span id="breadcrumb-current">Vaga</span>
+        </nav>
+
+        <p class="sr-only" id="detail-status" role="status" aria-live="polite"></p>
+
+        <article id="job-detail" class="detail-card" aria-busy="true">
+            <div class="loading">
+                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                <p>Carregando detalhes da vaga...</p>
+            </div>
+        </article>
+
+        <section id="similar-section" aria-labelledby="similar-title" hidden>
+            <h2 id="similar-title" class="section-title">Vagas parecidas</h2>
+            <div id="similar-grid" class="jobs-grid"></div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                <a href="index.html">Início</a> ·
+                <a href="https://github.com/evertonldesouza/JobRadar" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+                Desenvolvido por <strong>Everton L. de Souza</strong> &copy; 2026
+            </p>
+        </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <noscript><p style="text-align:center;padding:16px">O JobRadar precisa de JavaScript para exibir os detalhes da vaga.</p></noscript>
+    <script src="job.js?v=20261101"></script>
+</body>
+</html>

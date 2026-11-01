@@ -38,6 +38,15 @@ public class JobsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(JobDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var job = await _mediator.Send(new GetJobByIdQuery(id));
+        return Ok(job);
+    }
+
     [HttpGet("sources")]
     [ProducesResponseType(typeof(string[]), StatusCodes.Status200OK)]
     public IActionResult GetSources() => Ok(_sources);
