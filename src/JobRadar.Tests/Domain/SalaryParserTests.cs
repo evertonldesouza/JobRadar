@@ -21,7 +21,8 @@ public class SalaryParserTests
 
         Assert.NotNull(result);
         Assert.Equal(expectedMin, result!.Min);
-        Assert.Equal(expectedMax, result.Max);
+        // Valor único vira um ponto (sem teto); faixa só quando há dois valores distintos.
+        Assert.Equal(expectedMax == expectedMin ? null : expectedMax, result.Max);
         Assert.Equal(expectedCurrency, result.Currency);
         Assert.Equal(expectedPeriod, result.Period);
     }

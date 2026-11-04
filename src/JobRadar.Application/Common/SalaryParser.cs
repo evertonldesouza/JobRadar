@@ -13,14 +13,15 @@ public static partial class SalaryParser
 {
     private const decimal MaxReasonableAmount = 10_000_000m;
 
-    private static readonly Dictionary<string, string> SymbolCurrencies = new(StringComparer.Ordinal)
-    {
-        ["R$"] = "BRL",
-        ["€"] = "EUR",
-        ["£"] = "GBP",
-        ["₹"] = "INR",
-        ["$"] = "USD"
-    };
+    // Ordem importa: "R$" precisa ser testado antes de "$".
+    private static readonly (string Symbol, string Currency)[] SymbolCurrencies =
+    [
+        ("R$", "BRL"),
+        ("€", "EUR"),
+        ("£", "GBP"),
+        ("₹", "INR"),
+        ("$", "USD")
+    ];
 
     private static readonly HashSet<string> KnownCurrencies = new(StringComparer.OrdinalIgnoreCase)
     {
