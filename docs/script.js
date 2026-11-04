@@ -5,10 +5,14 @@
 const API = 'https://jobradar-api-rgcy.onrender.com';
 
 const PAGE_SIZE = 20;
+const GUEST_FAVORITES_KEY = 'jobradar_guest_favorites';
+
 let token = localStorage.getItem('jobradar_token');
 let refreshToken = localStorage.getItem('jobradar_refresh');
 let userName = localStorage.getItem('jobradar_user') || '';
 let favorites = [];
+let favoriteJobs = [];
+let guestFavorites = loadGuestFavorites();
 let currentPage = 1;
 let totalPages = 1;
 let totalCount = 0;
@@ -19,6 +23,53 @@ const $ = (id) => document.getElementById(id);
 const grid = $('jobs-grid');
 
 /* ---------- utilidades ---------- */
+
+/** Vagas salvas por quem ainda não entrou (vivem só neste navegador). */
+function loadGuestFavorites() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(GUEST_FAVORITES_KEY) || '[]');
+        return Array.isArray(raw) ? raw.filter((job) => job && job.id).slice(0, 100) : [];
+    } catch { return []; }
+}
+
+function saveGuestFavorites() {
+    try {
+        localStorage.setItem(GUEST_FAVORITES_KEY, JSON.stringify(guestFavorites.slice(0, 100)));
+    } catch { /* navegação privada: mantém só em memória */ }
+}
+
+/** Só aceita http(s): evita que um link javascript:/data: vindo da API seja clicável. */
+function safeUrl(value) {
+    try {
+        const url = new URL(String(value || ''));
+        return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    } catch { return null; }
+}
+
+/** Escreve o texto destacando o termo buscado — via nós de texto (sem innerHTML). */
+function appendHighlighted(container, text, term) {
+    const value = String(text ?? '');
+    const needle = String(term || '').trim();
+    if (!needle) { container.textContent = value; return; }
+
+    const haystack = value.toLowerCase();
+    const lower = needle.toLowerCase();
+    let index = 0;
+    let found = haystack.indexOf(lower);
+
+    if (found === -1) { container.textContent = value; return; }
+
+    while (found !== -1) {
+        if (found > index) container.appendChild(document.createTextNode(value.slice(index, found)));
+        const mark = document.createElement('mark');
+        mark.className = 'hl';
+        mark.textContent = value.slice(found, found + needle.length);
+        container.appendChild(mark);
+        index = found + needle.length;
+        found = haystack.indexOf(lower, index);
+    }
+    if (index < value.length) container.appendChild(document.createTextNode(value.slice(index)));
+}
 function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -142,29 +193,42 @@ const SOURCE_DESCRIPTIONS = {
     Adzuna: 'Vagas de tecnologia via API Adzuna'
 };
 
-function renderJobCard(job, index = 0) {
-    const isFav = favorites.includes(job.id);
+function favoriteIds() {
+    return token ? favorites : guestFavorites.map((job) => job.id);
+}
+
+function isFavorite(jobId) {
+    return favoriteIds().includes(jobId);
+}
+
+function syncFavoriteButton(btn, active) {
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+    btn.setAttribute('aria-label', active ? 'Remover dos favoritos' : 'Salvar nos favoritos');
+    const icon = btn.querySelector('i');
+    if (icon) icon.className = `${active ? 'fas' : 'far'} fa-star`;
+}
+
+function renderJobCard(job, index = 0, term = '') {
+    const hasFavorite = isFavorite(job.id);
     const card = el('article', 'job-card fade-in-up');
     card.style.animationDelay = `${index * 40}ms`;
 
     const header = el('div', 'job-card-header');
-    const link = el('a', 'job-title', job.title || 'Vaga sem título');
-    link.href = job.url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
+    const link = el('a', 'job-title');
+    link.href = `job.html?id=${encodeURIComponent(job.id)}`;
+    appendHighlighted(link, job.title || 'Vaga sem título', term);
     header.appendChild(link);
 
-    if (token) {
-        const favBtn = el('button', `btn-favorite${isFav ? ' active' : ''}`);
-        favBtn.type = 'button';
-        favBtn.setAttribute('aria-pressed', String(isFav));
-        favBtn.setAttribute('aria-label', isFav ? 'Remover dos favoritos' : 'Salvar nos favoritos');
-        const star = el('i', `${isFav ? 'fas' : 'far'} fa-star`);
-        star.setAttribute('aria-hidden', 'true');
-        favBtn.appendChild(star);
-        favBtn.addEventListener('click', () => toggleFavorite(job.id, favBtn));
-        header.appendChild(favBtn);
-    }
+    const favBtn = el('button', `btn-favorite${hasFavorite ? ' active' : ''}`);
+    favBtn.type = 'button';
+    favBtn.setAttribute('aria-pressed', String(hasFavorite));
+    favBtn.setAttribute('aria-label', hasFavorite ? 'Remover dos favoritos' : 'Salvar nos favoritos');
+    const star = el('i', `${hasFavorite ? 'fas' : 'far'} fa-star`);
+    star.setAttribute('aria-hidden', 'true');
+    favBtn.appendChild(star);
+    favBtn.addEventListener('click', () => toggleFavorite(job, favBtn));
+    header.appendChild(favBtn);
 
     const meta = el('div', 'job-meta');
     const company = el('div', 'job-company');
@@ -175,15 +239,33 @@ function renderJobCard(job, index = 0) {
 
     const tags = el('div', 'job-tags');
     (job.technologies || []).slice(0, 5).forEach((tech) => {
-        tags.appendChild(el('span', `tag ${TAG_CLASSES[String(tech).toLowerCase()] || 'tag-default'}`, String(tech)));
+        const tag = el('span', `tag ${TAG_CLASSES[String(tech).toLowerCase()] || 'tag-default'}`);
+        appendHighlighted(tag, String(tech), term);
+        tags.appendChild(tag);
     });
 
     const footer = el('div', 'job-footer');
+    const metaBox = el('div', 'job-footer-meta');
     const date = job.publishedAt ? new Date(job.publishedAt).toLocaleDateString('pt-BR') : '';
     const badge = el('span', 'source-badge', job.source || '');
     badge.dataset.source = job.source || '';
     badge.title = SOURCE_DESCRIPTIONS[job.source] || `Fonte: ${job.source || ''}`;
-    footer.append(el('span', null, date), badge);
+    metaBox.append(el('span', null, date), badge);
+    footer.appendChild(metaBox);
+
+    const openUrl = safeUrl(job.url);
+    if (openUrl) {
+        const apply = el('a', 'btn-apply');
+        apply.href = openUrl;
+        apply.target = '_blank';
+        apply.rel = 'noopener noreferrer';
+        apply.setAttribute('aria-label', `Abrir vaga ${job.title || ''} no site original (nova aba)`);
+        apply.append(document.createTextNode('Abrir vaga '));
+        const applyIcon = el('i', 'fas fa-arrow-up-right-from-square');
+        applyIcon.setAttribute('aria-hidden', 'true');
+        apply.appendChild(applyIcon);
+        footer.appendChild(apply);
+    }
 
     card.append(header, meta, tags, footer);
     return card;
@@ -249,54 +331,101 @@ async function fetchJobs(append = false) {
 async function applyJobsPage(data, append) {
     totalPages = data.totalPages || 1;
     totalCount = data.totalCount || 0;
-    if (token) await fetchFavorites();
+    await refreshFavorites();
+    const term = $('filter-tech').value.trim();
     if (!append) grid.replaceChildren();
     if (!append && data.items.length === 0) { showEmptyState(); renderJobCount(0); return; }
-    data.items.forEach((job, i) => grid.appendChild(renderJobCard(job, i)));
+    data.items.forEach((job, i) => grid.appendChild(renderJobCard(job, i, term)));
     renderJobCount(grid.querySelectorAll('.job-card:not(.skeleton-card)').length);
 }
 
-/* ---------- favoritos ---------- */
-async function fetchFavorites(retried = false) {
-    if (!token) return;
+/* ---------- favoritos (conta + visitante) ---------- */
+async function refreshFavorites(retried = false) {
+    if (!token) {
+        renderFavoritesSection();
+        return;
+    }
     try {
         const res = await fetch(`${API}/api/Favorites`, { headers: authHeaders() });
         if (res.status === 401) {
-            if (!retried && await tryRefresh()) return fetchFavorites(true);
-            logout('Sua sessão expirou. Entre novamente.');
+            if (!retried && await tryRefresh()) return refreshFavorites(true);
             return;
         }
         if (!res.ok) return;
-        const jobs = await res.json();
-        favorites = jobs.map((job) => job.id);
-        const favGrid = $('favorites-grid');
-        favGrid.replaceChildren();
-        jobs.forEach((job, i) => favGrid.appendChild(renderJobCard(job, i)));
-        $('favorites-section').hidden = false;
-        $('favorites-empty').hidden = jobs.length > 0;
+        favoriteJobs = await res.json();
+        favorites = favoriteJobs.map((job) => job.id);
+        renderFavoritesSection();
     } catch { /* mantém a listagem utilizável sem favoritos */ }
 }
 
-async function toggleFavorite(jobId, btn) {
-    const isFav = favorites.includes(jobId);
+function renderFavoritesSection() {
+    const jobs = token ? favoriteJobs : guestFavorites;
+    const favGrid = $('favorites-grid');
+    favGrid.replaceChildren();
+    jobs.forEach((job, i) => favGrid.appendChild(renderJobCard(job, i)));
+
+    const empty = $('favorites-empty');
+    empty.textContent = token
+        ? 'Você ainda não favoritou nenhuma vaga. Toque na estrela de um card para salvar aqui.'
+        : 'Toque na estrela de uma vaga para salvá-la aqui — ao entrar, seus favoritos vão junto para sua conta.';
+    empty.hidden = jobs.length > 0;
+
+    // Visitante sem favoritos não vê uma seção vazia.
+    $('favorites-section').hidden = !token && jobs.length === 0;
+}
+
+async function toggleFavorite(job, btn) {
+    const currentlyFav = isFavorite(job.id);
     btn.disabled = true;
+
+    if (!token) {
+        guestFavorites = currentlyFav
+            ? guestFavorites.filter((item) => item.id !== job.id)
+            : [...guestFavorites, job];
+        saveGuestFavorites();
+        syncFavoriteButton(btn, !currentlyFav);
+        renderFavoritesSection();
+        toast(currentlyFav
+            ? 'Removido dos favoritos.'
+            : 'Salvo neste navegador. Entre para levar seus favoritos para a conta.');
+        btn.disabled = false;
+        return;
+    }
+
     try {
-        const res = await fetch(`${API}/api/Favorites/${jobId}`, {
-            method: isFav ? 'DELETE' : 'POST', headers: authHeaders()
+        const res = await fetch(`${API}/api/Favorites/${job.id}`, {
+            method: currentlyFav ? 'DELETE' : 'POST', headers: authHeaders()
         });
         if (!res.ok && res.status !== 204) throw new Error(await readError(res));
-        favorites = isFav ? favorites.filter((id) => id !== jobId) : [...favorites, jobId];
-        btn.classList.toggle('active', !isFav);
-        btn.setAttribute('aria-pressed', String(!isFav));
-        btn.setAttribute('aria-label', isFav ? 'Salvar nos favoritos' : 'Remover dos favoritos');
-        btn.querySelector('i').className = `${isFav ? 'far' : 'fas'} fa-star`;
-        toast(isFav ? 'Removido dos favoritos.' : 'Salvo nos favoritos!');
-        await fetchFavorites();
+        syncFavoriteButton(btn, !currentlyFav);
+        toast(currentlyFav ? 'Removido dos favoritos.' : 'Salvo nos favoritos!');
+        await refreshFavorites();
     } catch (err) {
         toast(err.message || 'Não foi possível atualizar o favorito.');
     } finally {
         btn.disabled = false;
     }
+}
+
+/** Leva os favoritos salvos no navegador para a conta, logo após entrar. */
+async function mergeGuestFavorites() {
+    if (!token || guestFavorites.length === 0) return;
+
+    try {
+        const res = await fetch(`${API}/api/Favorites/merge`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobIds: guestFavorites.map((job) => job.id) })
+        });
+        if (res.status === 401 || !res.ok) return;
+
+        const total = guestFavorites.length;
+        guestFavorites = [];
+        saveGuestFavorites();
+        toast(total === 1
+            ? '1 favorito salvo aqui foi sincronizado com sua conta.'
+            : `${total} favoritos salvos aqui foram sincronizados com sua conta.`);
+    } catch { /* tenta de novo na próxima visita */ }
 }
 
 /* ---------- alertas ---------- */
@@ -373,8 +502,8 @@ function updateAuthSection() {
         loginBtn.id = 'btn-login';
         loginBtn.addEventListener('click', openAuthDialog);
         section.appendChild(loginBtn);
-        $('favorites-section').hidden = true;
         $('alerts-section').hidden = true;
+        renderFavoritesSection();
     }
 }
 
@@ -385,10 +514,12 @@ async function logout(message) {
     refreshToken = null;
     userName = '';
     favorites = [];
+    favoriteJobs = [];
     localStorage.removeItem('jobradar_token');
     localStorage.removeItem('jobradar_refresh');
     localStorage.removeItem('jobradar_user');
     updateAuthSection();
+    renderFavoritesSection();
     if (message) toast(message);
     fetchJobs(false);
 
@@ -444,7 +575,8 @@ async function submitAuth(formId, errorId, path, payload) {
         closeAuthDialog();
         updateAuthSection();
         toast(`Bem-vindo${userName ? `, ${userName.split(' ')[0]}` : ''}!`);
-        await fetchFavorites();
+        await mergeGuestFavorites();
+        await refreshFavorites();
         await fetchAlerts();
         fetchJobs(false);
     } catch (err) {
@@ -588,6 +720,10 @@ if (location.hash || initialParams.has('token')) {
         showAuthForm('reset');
         toast('Crie sua nova senha para concluir a recuperação.');
     }
-    if (token) { fetchFavorites(); fetchAlerts(); }
+    if (token) {
+        await mergeGuestFavorites();
+        fetchAlerts();
+    }
+    refreshFavorites();
     fetchJobs(false);
 })();

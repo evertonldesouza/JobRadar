@@ -19,15 +19,9 @@ public class GetFavoritesQueryHandler : IRequestHandler<GetFavoritesQuery, IEnum
     {
         var favorites = await _favoriteRepository.GetByUserIdAsync(request.UserId);
 
-        return favorites.Select(f => new JobDto(
-            f.Job.Id,
-            f.Job.Title,
-            f.Job.Company,
-            f.Job.Location,
-            f.Job.Url,
-            f.Job.PublishedAt,
-            f.Job.Technologies,
-            f.Job.Source
-        ));
+        return favorites
+            .Select(f => JobDto.FromJob(f.Job))
+            .OrderByDescending(j => j.PublishedAt)
+            .ToList();
     }
 }

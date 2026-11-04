@@ -31,6 +31,23 @@ public class FavoritesController : ControllerBase
         return Ok(favorites);
     }
 
+    /// <summary>
+    /// Sincroniza favoritos salvos localmente (visitante) com a conta.
+    /// Idempotente: repetir a chamada não duplica nem gera erro.
+    /// </summary>
+    [HttpPost("merge")]
+    [ProducesResponseType(typeof(IEnumerable<JobDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> MergeFavorites([FromBody] MergeFavoritesRequest request)
+    {
+        var userId = this.User.GetUserId();
+        var favorites = await _mediator.Send(new MergeFavoritesCommand(userId, request?.JobIds ?? []));
+        _logger.LogInformation(
+            "Favoritos sincronizados: User={UserId}, Recebidos={Count}", userId, request?.JobIds?.Count ?? 0);
+        return Ok(favorites);
+    }
+
     [HttpPost("{jobId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -55,3 +72,6 @@ public class FavoritesController : ControllerBase
         return NoContent();
     }
 }
+
+/// <summary>Payload da sincronização de favoritos vindos do navegador.</summary>
+public record MergeFavoritesRequest(List<Guid> JobIds);

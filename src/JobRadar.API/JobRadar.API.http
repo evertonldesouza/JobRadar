@@ -9,6 +9,10 @@ GET {{baseUrl}}/health/ready
 ### Listar vagas (filtros: technology, location, source, page, pageSize)
 GET {{baseUrl}}/api/Jobs?technology=react&page=1&pageSize=20
 
+### Detalhe de uma vaga
+@jobId = cole-um-guid-de-vaga-aqui
+GET {{baseUrl}}/api/Jobs/{{jobId}}
+
 ### Fontes disponíveis
 GET {{baseUrl}}/api/Jobs/sources
 
@@ -30,6 +34,13 @@ Content-Type: application/json
 ### Favoritos (requer JWT)
 GET {{baseUrl}}/api/Favorites
 Authorization: Bearer {{token}}
+
+### Sincronizar favoritos salvos no navegador (requer JWT)
+POST {{baseUrl}}/api/Favorites/merge
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "jobIds": ["cole-guid-de-vaga-aqui"] }
 
 ### Criar alerta (requer JWT)
 POST {{baseUrl}}/api/Alerts

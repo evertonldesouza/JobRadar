@@ -19,12 +19,29 @@ public class FavoriteRepository : IFavoriteRepository
             .Where(f => f.UserId == userId)
             .ToListAsync();
 
+    public async Task<IReadOnlyList<Guid>> GetJobIdsByUserIdAsync(Guid userId) =>
+        await _context.FavoriteJobs
+            .AsNoTracking()
+            .Where(f => f.UserId == userId)
+            .Select(f => f.JobId)
+            .ToListAsync();
+
     public async Task<bool> ExistsAsync(Guid userId, Guid jobId) =>
         await _context.FavoriteJobs.AnyAsync(f => f.UserId == userId && f.JobId == jobId);
 
     public async Task AddAsync(FavoriteJob favorite)
     {
         await _context.FavoriteJobs.AddAsync(favorite);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task AddRangeAsync(IEnumerable<FavoriteJob> favorites)
+    {
+        var list = favorites.ToList();
+        if (list.Count == 0)
+            return;
+
+        await _context.FavoriteJobs.AddRangeAsync(list);
         await _context.SaveChangesAsync();
     }
 
