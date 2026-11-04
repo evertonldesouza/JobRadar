@@ -197,4 +197,35 @@ public class ApiIntegrationTests : IClassFixture<JobRadarApiFactory>
         using var listJson = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
         Assert.Single(listJson.RootElement.EnumerateArray());
     }
+
+    [Fact]
+    public async Task SalarySummary_ReturnsMedianAndCoverage()
+    {
+        var response = await _client.GetAsync("/api/Salaries/summary?currency=USD&minimumSamples=1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal("USD", json.RootElement.GetProperty("currency").GetString());
+
+        var coverage = json.RootElement.GetProperty("coverage");
+        Assert.True(coverage.GetProperty("jobsWithSalary").GetInt32() >= 2);
+        Assert.True(coverage.GetProperty("totalJobs").GetInt32() >= coverage.GetProperty("jobsWithSalary").GetInt32());
+
+        var python = json.RootElement.GetProperty("technologies").EnumerateArray()
+            .First(t => t.GetProperty("technology").GetString() == "python");
+        // 100k (80–120) e 100k (90–110) → mediana 100k.
+        Assert.Equal(100000m, python.GetProperty("medianAnnual").GetDecimal());
+        Assert.Equal(2, python.GetProperty("samples").GetInt32());
+
+        Assert.False(string.IsNullOrWhiteSpace(json.RootElement.GetProperty("disclaimer").GetString()));
+    }
+
+    [Fact]
+    public async Task SalarySummary_WithInvalidMinimumSamples_Returns400()
+    {
+        var response = await _client.GetAsync("/api/Salaries/summary?minimumSamples=0");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

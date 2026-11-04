@@ -4,6 +4,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/), versio
 
 ## [Não lançado]
 
+### Adicionado (comparador de salários)
+- `GET /api/salaries/summary`: mediana, p25 e p75 por tecnologia em base anual, com filtro de moeda, mínimo de amostras e limite de tecnologias.
+- Extração de salário nas fontes: Remotive (texto livre), Adzuna (`salary_min`/`salary_max`, descartando valores previstos) e RemoteOK (`salary_min`/`salary_max`).
+- Migration `AddJobSalary` (colunas `SalaryMin`, `SalaryMax`, `SalaryCurrency`, `SalaryPeriod` em `Jobs`).
+- Página `docs/salaries.html` com gráfico de faixas, seletor de moeda e aviso explícito de cobertura; selo de salário nos cards e na página de detalhes.
+
 ### Adicionado (descoberta de vagas)
 - `GET /api/jobs/{id}`: detalhe da vaga, com 404 em ProblemDetails para id inexistente.
 - Busca por tecnologia tolerante a caixa e que também considera título e empresa; o termo buscado é destacado nos cards sem uso de `innerHTML`.
