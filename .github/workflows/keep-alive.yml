@@ -1,0 +1,16 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: "*/10 10-22 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API
+        run: |
+          curl -L --fail --silent --show-error \
+            https://jobradar-api-rgcy.onrender.com/healthz \
+            && echo "API OK" || echo "API não respondeu"

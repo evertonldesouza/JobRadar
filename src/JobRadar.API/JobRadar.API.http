@@ -1,0 +1,54 @@
+@baseUrl = http://localhost:5225
+@token = cole-seu-jwt-aqui
+
+### Health
+GET {{baseUrl}}/health/live
+###
+GET {{baseUrl}}/health/ready
+
+### Listar vagas (filtros: technology, location, source, page, pageSize)
+GET {{baseUrl}}/api/Jobs?technology=react&page=1&pageSize=20
+
+### Detalhe de uma vaga
+@jobId = cole-um-guid-de-vaga-aqui
+GET {{baseUrl}}/api/Jobs/{{jobId}}
+
+### Fontes disponíveis
+GET {{baseUrl}}/api/Jobs/sources
+
+### Exportar CSV
+GET {{baseUrl}}/api/Jobs/export?technology=python
+
+### Registrar
+POST {{baseUrl}}/api/Auth/register
+Content-Type: application/json
+
+{ "name": "Seu Nome", "email": "voce@exemplo.com", "password": "senha-com-letras-e-123" }
+
+### Login
+POST {{baseUrl}}/api/Auth/login
+Content-Type: application/json
+
+{ "email": "voce@exemplo.com", "password": "senha-com-letras-e-123" }
+
+### Favoritos (requer JWT)
+GET {{baseUrl}}/api/Favorites
+Authorization: Bearer {{token}}
+
+### Sincronizar favoritos salvos no navegador (requer JWT)
+POST {{baseUrl}}/api/Favorites/merge
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "jobIds": ["cole-guid-de-vaga-aqui"] }
+
+### Criar alerta (requer JWT)
+POST {{baseUrl}}/api/Alerts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "technology": "React", "location": "Remoto", "source": null }
+
+### Sync manual (requer JWT)
+POST {{baseUrl}}/api/Jobs/sync
+Authorization: Bearer {{token}}
