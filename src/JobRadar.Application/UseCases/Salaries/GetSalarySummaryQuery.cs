@@ -48,7 +48,7 @@ public sealed class GetSalarySummaryQueryHandler : IRequestHandler<GetSalarySumm
         var samples = entries
             .Where(e => string.Equals(e.Currency, currency, StringComparison.OrdinalIgnoreCase))
             .Select(ToAnnualMidpoint)
-            .Where(value => value is >= MinAnnual and <= MaxAnnual)
+            .Where(sample => sample.Annual >= MinAnnual && sample.Annual <= MaxAnnual)
             .ToList();
 
         var coverage = new SalaryCoverageDto(
