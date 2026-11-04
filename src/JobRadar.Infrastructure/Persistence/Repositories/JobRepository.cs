@@ -1,5 +1,6 @@
 using JobRadar.Domain.Entities;
 using JobRadar.Domain.Interfaces;
+using JobRadar.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobRadar.Infrastructure.Persistence.Repositories;
@@ -60,6 +61,21 @@ public class JobRepository : IJobRepository
 
     public async Task<Job?> GetByIdAsync(Guid id) =>
         await _context.Jobs.FindAsync(id);
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
+        _context.Jobs.AsNoTracking().CountAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<JobSalaryEntry>> GetSalaryEntriesAsync(CancellationToken cancellationToken = default) =>
+        await _context.Jobs
+            .AsNoTracking()
+            .Where(j => j.SalaryMin != null && j.SalaryCurrency != null)
+            .Select(j => new JobSalaryEntry(
+                j.Technologies,
+                j.SalaryMin!.Value,
+                j.SalaryMax,
+                j.SalaryCurrency!,
+                j.SalaryPeriod ?? "year"))
+            .ToListAsync(cancellationToken);
 
     public async Task<bool> ExistsByUrlAsync(string url) =>
         await _context.Jobs.AnyAsync(j => j.Url == url);

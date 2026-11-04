@@ -1,3 +1,5 @@
+using JobRadar.Domain.ValueObjects;
+
 namespace JobRadar.Domain.Entities;
 
 public class Job
@@ -12,6 +14,14 @@ public class Job
     public string Source { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
 
+    /// <summary>Faixa salarial informada pela fonte (nem toda vaga informa).</summary>
+    public decimal? SalaryMin { get; private set; }
+    public decimal? SalaryMax { get; private set; }
+    public string? SalaryCurrency { get; private set; }
+    public string? SalaryPeriod { get; private set; }
+
+    public bool HasSalary => SalaryMin is not null && !string.IsNullOrEmpty(SalaryCurrency);
+
     protected Job() { }
 
     public static Job Create(
@@ -21,7 +31,8 @@ public class Job
         string url,
         DateTime publishedAt,
         List<string> technologies,
-        string source)
+        string source,
+        SalaryRange? salary = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Título da vaga é obrigatório.", nameof(title));
@@ -48,7 +59,11 @@ public class Job
                 .Take(20)
                 .ToList(),
             Source = source.Trim(),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            SalaryMin = salary?.Min,
+            SalaryMax = salary?.Max,
+            SalaryCurrency = salary?.Currency,
+            SalaryPeriod = salary is null ? null : ValueObjects.SalaryRange.PeriodToString(salary.Period)
         };
     }
 
