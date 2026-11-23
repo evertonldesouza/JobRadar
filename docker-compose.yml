@@ -40,6 +40,9 @@ services:
       Smtp__User: ${SMTP_USER:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
       Smtp__From: ${SMTP_FROM:-}
+      Sync__IntervalHours: ${SYNC_INTERVAL_HOURS:-1}
+      Sync__OnStartup: ${SYNC_ON_STARTUP:-true}
+      Sync__RetentionDays: ${SYNC_RETENTION_DAYS:-90}
     ports:
       - "${API_PORT:-8080}:8080"
 

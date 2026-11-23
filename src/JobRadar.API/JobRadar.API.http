@@ -52,6 +52,6 @@ Content-Type: application/json
 
 { "technology": "React", "location": "Remoto", "source": null }
 
-### Sync manual (requer JWT)
-POST {{baseUrl}}/api/Jobs/sync
+### Sync manual (requer JWT) — sem retentionDays usa o valor de Sync:RetentionDays
+POST {{baseUrl}}/api/Jobs/sync?retentionDays=90
 Authorization: Bearer {{token}}

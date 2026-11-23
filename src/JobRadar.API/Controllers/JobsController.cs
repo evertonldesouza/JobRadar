@@ -104,11 +104,14 @@ public class JobsController : ControllerBase
     [Authorize]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Sync()
+    public async Task<IActionResult> Sync(
+        [FromQuery] int? retentionDays = null,
+        [FromServices] IConfiguration configuration = null!)
     {
-        var count = await _mediator.Send(new SyncJobsCommand());
+        var retention = retentionDays ?? configuration.GetValue("Sync:RetentionDays", 90);
+        var count = await _mediator.Send(new SyncJobsCommand(retention));
         _logger.LogInformation("Sincronização manual concluída: {Count} vagas importadas", count);
-        return Ok(new { imported = count });
+        return Ok(new { imported = count, retentionDays = retention });
     }
 
     [HttpDelete("duplicates")]

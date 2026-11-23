@@ -84,6 +84,11 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddHostedService<JobsSyncBackgroundService>();
 
+// Sync único logo após a subida: o plano gratuito do Render hiberna e, ao acordar,
+// a base precisa receber dados novos sem esperar o próximo ciclo periódico.
+if (builder.Configuration.GetValue("Sync:OnStartup", true))
+    builder.Services.AddHostedService<StartupSyncService>();
+
 // Rate limiting: política geral por IP + política estrita para autenticação.
 builder.Services.AddRateLimiter(options =>
 {

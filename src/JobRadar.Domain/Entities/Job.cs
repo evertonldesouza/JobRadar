@@ -67,6 +67,36 @@ public class Job
         };
     }
 
+    /// <summary>
+    /// Preenche a faixa salarial quando a fonte passa a informá-la.
+    /// Não sobrescreve um salário já conhecido (a fonte original é a referência)
+    /// e devolve <c>true</c> apenas quando houve mudança real.
+    /// </summary>
+    public bool TrySetSalary(SalaryRange? salary)
+    {
+        if (salary is null || HasSalary)
+            return false;
+
+        SalaryMin = salary.Min;
+        SalaryMax = salary.Max;
+        SalaryCurrency = salary.Currency;
+        SalaryPeriod = SalaryRange.PeriodToString(salary.Period);
+        return true;
+    }
+
+    /// <summary>Remove a faixa salarial (usada quando a fonte deixa de informá-la).</summary>
+    public bool TryClearSalary()
+    {
+        if (!HasSalary && SalaryMax is null && SalaryCurrency is null && SalaryPeriod is null)
+            return false;
+
+        SalaryMin = null;
+        SalaryMax = null;
+        SalaryCurrency = null;
+        SalaryPeriod = null;
+        return true;
+    }
+
     /// <summary>Chave de deduplicação (título + empresa), normalizada.</summary>
     public string DeduplicationKey => $"{Title.Trim().ToLowerInvariant()}|{Company.Trim().ToLowerInvariant()}";
 }

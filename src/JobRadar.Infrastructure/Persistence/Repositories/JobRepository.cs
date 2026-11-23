@@ -101,6 +101,19 @@ public class JobRepository : IJobRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        _context.SaveChangesAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Job>> GetByUrlsAsync(IReadOnlyCollection<string> urls, CancellationToken cancellationToken = default)
+    {
+        if (urls.Count == 0)
+            return [];
+
+        return await _context.Jobs
+            .Where(j => urls.Contains(j.Url))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<string>> GetExistingUrlsAsync(IReadOnlyCollection<string> urls, CancellationToken cancellationToken = default)
     {
         if (urls.Count == 0)
@@ -127,6 +140,33 @@ public class JobRepository : IJobRepository
         return matches
             .Select(j => $"{j.Title.Trim().ToLowerInvariant()}|{j.Company.Trim().ToLowerInvariant()}")
             .ToList();
+    }
+
+    public async Task<int> RemoveOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default)
+    {
+        var cutoffUtc = DateTime.SpecifyKind(cutoff, DateTimeKind.Utc);
+
+        var old = await _context.Jobs
+            .Where(j => j.PublishedAt < cutoffUtc)
+            .ToListAsync(cancellationToken);
+
+        if (old.Count == 0)
+            return 0;
+
+        // A FK de FavoriteJobs -> Jobs é Cascade no banco (PostgreSQL); removemos
+        // explicitamente aqui também para manter o mesmo comportamento no provider
+        // em memória usado pelos testes.
+        var oldIds = old.Select(j => j.Id).ToList();
+        var favorites = await _context.FavoriteJobs
+            .Where(f => oldIds.Contains(f.JobId))
+            .ToListAsync(cancellationToken);
+
+        if (favorites.Count > 0)
+            _context.FavoriteJobs.RemoveRange(favorites);
+
+        _context.Jobs.RemoveRange(old);
+        await _context.SaveChangesAsync(cancellationToken);
+        return old.Count;
     }
 
     public async Task<int> RemoveDuplicatesAsync()

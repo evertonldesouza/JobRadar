@@ -107,6 +107,12 @@ public static partial class SalaryParser
             "day" or "days" or "dia" or "dias" => SalaryPeriod.Day,
             "week" or "weeks" or "semana" or "semanas" or "weekly" or "semanal" => SalaryPeriod.Week,
             "mo" or "month" or "months" or "mês" or "mes" or "meses" or "monthly" or "mensal" => SalaryPeriod.Month,
+
+            // Anual explícito: "per annum", "annual", "yearly" e "por ano".
+            "yr" or "year" or "years" or "annum" or "annual" or "annually" or "yearly" or "anual" => SalaryPeriod.Year,
+
+            // Sem período declarado o padrão do mercado é anual, mas o valor pode
+            // ser fruto de um match vazio ("$" isolado). O default continua anual.
             _ => SalaryPeriod.Year
         };
     }

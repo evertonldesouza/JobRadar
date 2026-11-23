@@ -36,8 +36,9 @@ O JobRadar agrega vagas de tecnologia de múltiplas fontes públicas, permite fi
 - 🗂️ **Página de detalhes** por vaga (`docs/job.html?id=…`) com meta tags dinâmicas para compartilhamento
 - ⭐ **Favoritos** que funcionam até sem conta (guardados no navegador) e são **sincronizados automaticamente** ao entrar (`POST /api/favorites/merge`)
 - 🔔 **Alertas de vagas** — novas vagas compatíveis disparam notificação (hoje via `MockEmailService`)
+- ♻️ **Expiração automática**: vagas publicadas há mais de `Sync:RetentionDays` (90 dias por padrão) saem junto do sync, mantendo a base atual
 - 🛰️ **5 fontes agregadas** (RemoteOK, Remotive, CareerNest, JobsBase, Adzuna), buscadas em paralelo, com deduplicação em lote
-- 🔄 Sincronização manual autenticada (`POST /api/jobs/sync`) e **automática configurável** via background service
+- 🔄 Sincronização manual autenticada (`POST /api/jobs/sync`), automática via background service e **na subida** (`Sync:OnStartup`), que completa salários de vagas já existentes (backfill)
 - ⚡ Cache em memória com invalidação após cada sync
 - 🚦 **Rate limiting** por IP (geral + política estrita para login/registro)
 - 📤 **Export CSV** protegido contra CSV injection

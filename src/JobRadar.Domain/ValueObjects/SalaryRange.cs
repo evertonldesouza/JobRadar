@@ -54,6 +54,19 @@ public sealed record SalaryRange
         _ => value
     };
 
+    /// <summary>Reconstrói a faixa a partir dos campos de uma vaga já preenchida.</summary>
+    public static SalaryRange? FromJob(Entities.Job job)
+    {
+        if (!job.HasSalary || job.SalaryMin is null || string.IsNullOrWhiteSpace(job.SalaryCurrency))
+            return null;
+
+        return new SalaryRange(
+            job.SalaryMin.Value,
+            job.SalaryMax,
+            job.SalaryCurrency,
+            ParsePeriod(job.SalaryPeriod));
+    }
+
     public static SalaryPeriod ParsePeriod(string? value) => (value ?? string.Empty).ToLowerInvariant() switch
     {
         "month" => SalaryPeriod.Month,

@@ -1,12 +1,17 @@
 using JobRadar.Application.Abstractions;
 using JobRadar.Domain.Entities;
 using JobRadar.Domain.Interfaces;
+using JobRadar.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace JobRadar.Application.UseCases.Jobs;
 
-public record SyncJobsCommand : IRequest<int>;
+/// <param name="RetentionDays">
+/// Vagas publicadas há mais tempo que isso são removidas no fim do sync.
+/// 0 (padrão) desativa a expiração.
+/// </param>
+public record SyncJobsCommand(int RetentionDays = 0) : IRequest<int>;
 
 public sealed class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, int>
 {
@@ -64,13 +69,32 @@ public sealed class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, in
         if (newJobs.Count > 0)
         {
             await _jobRepository.AddRangeAsync(newJobs);
-            JobsCache.Invalidate();
             await NotifyAlertsAsync(newJobs);
         }
 
+        // Backfill: vagas já importadas antes de a fonte informar salário (ou antes
+        // de existir o campo) recebem a faixa agora. Sem isso, o histórico nunca é
+        // completado — o dedupe por URL faria essas vagas serem descartadas sempre.
+        var updated = await BackfillSalariesAsync(candidates, existingUrls, cancellationToken);
+
+        var purged = 0;
+        if (request.RetentionDays > 0)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-request.RetentionDays);
+            purged = await _jobRepository.RemoveOlderThanAsync(cutoff, cancellationToken);
+
+            if (purged > 0)
+                _logger.LogInformation(
+                    "Expiração aplicada: {Purged} vagas publicadas antes de {Cutoff:yyyy-MM-dd} removidas",
+                    purged, cutoff);
+        }
+
+        if (newJobs.Count > 0 || updated > 0 || purged > 0)
+            JobsCache.Invalidate();
+
         _logger.LogInformation(
-            "Sync finalizado: {New} novas vagas ({Candidates} avaliadas, {Sources} fontes)",
-            newJobs.Count, candidates.Count, _sources.Count());
+            "Sync finalizado: {New} novas vagas, {Updated} salários completados, {Purged} expiradas ({Candidates} avaliadas, {Sources} fontes)",
+            newJobs.Count, updated, purged, candidates.Count, _sources.Count());
 
         return newJobs.Count;
     }
@@ -90,9 +114,54 @@ public sealed class SyncJobsCommandHandler : IRequestHandler<SyncJobsCommand, in
         }
     }
 
+    /// <summary>
+    /// Completa a faixa salarial de vagas que já estavam na base. Só escreve
+    /// quando a vaga passa a informar salário que não conhecíamos antes.
+    /// </summary>
+    private async Task<int> BackfillSalariesAsync(
+        List<Job> candidates,
+        HashSet<string> existingUrls,
+        CancellationToken cancellationToken)
+    {
+        var withSalary = candidates
+            .Where(job => job.HasSalary && existingUrls.Contains(job.Url))
+            .GroupBy(job => job.Url, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+
+        if (withSalary.Count == 0)
+            return 0;
+
+        var tracked = await _jobRepository.GetByUrlsAsync(withSalary.Select(j => j.Url).ToList(), cancellationToken)
+                      ?? [];
+
+        if (tracked.Count == 0)
+            return 0;
+
+        var byUrl = withSalary.ToDictionary(job => job.Url, StringComparer.OrdinalIgnoreCase);
+        var updated = 0;
+
+        foreach (var job in tracked)
+        {
+            if (byUrl.TryGetValue(job.Url, out var source) &&
+                job.TrySetSalary(SalaryRange.FromJob(source)))
+            {
+                updated++;
+            }
+        }
+
+        if (updated > 0)
+        {
+            await _jobRepository.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Backfill de salário concluído: {Updated} vagas atualizadas", updated);
+        }
+
+        return updated;
+    }
+
     private async Task NotifyAlertsAsync(List<Job> newJobs)
     {
-        var alerts = await _alertRepository.GetAllAsync();
+        var alerts = await _alertRepository.GetAllAsync() ?? [];
 
         foreach (var alert in alerts)
         {

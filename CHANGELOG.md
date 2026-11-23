@@ -4,6 +4,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/), versio
 
 ## [Não lançado]
 
+### Corrigido (dados de produção)
+- **Backfill de salário**: o sync só inseria vagas novas (dedupe por URL), então o histórico importado antes do comparador nunca recebia faixa salarial — em produção eram 0 de 1.576 vagas. Agora vagas existentes têm o salário completado quando a fonte passa a informá-lo (`Job.TrySetSalary`, sem sobrescrever dado já conhecido).
+- **Período anual explícito** no parser: `annum`, `annual`/`yearly` e `anual` caíam no `default` do switch, funcionando por sorte.
+- **Expiração de vagas antigas**: base crescia indefinidamente com anúncios de meses atrás. `Sync:RetentionDays` (padrão 90) remove vagas antigas no sync, com remoção em cascata dos favoritos.
+- **Sync na subida** (`Sync:OnStartup`): no plano gratuito do Render a instância hiberna; ao acordar, uma sincronização única garante dados novos sem esperar o ciclo periódico.
+
 ### Adicionado (comparador de salários)
 - `GET /api/salaries/summary`: mediana, p25 e p75 por tecnologia em base anual, com filtro de moeda, mínimo de amostras e limite de tecnologias.
 - Extração de salário nas fontes: Remotive (texto livre), Adzuna (`salary_min`/`salary_max`, descartando valores previstos) e RemoteOK (`salary_min`/`salary_max`).
