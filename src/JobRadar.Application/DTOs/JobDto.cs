@@ -51,7 +51,9 @@ public record JobDto(
             };
 
             var min = SalaryMin.Value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
-            if (SalaryMax is null || SalaryMax < SalaryMin)
+            // Anúncios que repetem o mesmo valor (ex.: "GBP 85.000 – 85.000")
+            // não são uma faixa: exibir uma única vez evita ruído.
+            if (SalaryMax is null || SalaryMax <= SalaryMin)
                 return $"{currency} {min}{periodLabel}";
 
             var max = SalaryMax.Value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
