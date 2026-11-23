@@ -251,6 +251,13 @@ function renderDetail(job) {
     published.append(icon('fas fa-calendar'), document.createTextNode(` ${formatDate(job.publishedAt)}`));
     meta.append(company, location, published);
 
+    if (job.salaryText) {
+        const salary = el('span', 'salary-badge');
+        salary.append(icon('fas fa-money-bill-wave'), document.createTextNode(` ${job.salaryText}`));
+        salary.title = 'Salário informado no anúncio original';
+        meta.appendChild(salary);
+    }
+
     const source = el('span', 'source-badge', job.source || '');
     source.dataset.source = job.source || '';
     source.title = SOURCE_DESCRIPTIONS[job.source] || `Fonte: ${job.source || ''}`;

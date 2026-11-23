@@ -32,6 +32,7 @@ O JobRadar agrega vagas de tecnologia de múltiplas fontes públicas, permite fi
 
 - 🔐 Autenticação com **JWT** (expiração configurável) e **OAuth via Google**, com vínculo de contas existentes
 - 🔎 Listagem e filtragem de vagas por tecnologia, localização e fonte, com paginação validada (máx. 100/página) e **busca tolerante** (ignora caixa e também procura no título/empresa), com o termo **destacado** nos cards
+- 💰 **Comparador de salários** (`/api/salaries/summary` + `docs/salaries.html`): mediana, p25/p75 por tecnologia em base anual, com a **cobertura** dos dados exposta (só entram vagas que informam salário)
 - 🗂️ **Página de detalhes** por vaga (`docs/job.html?id=…`) com meta tags dinâmicas para compartilhamento
 - ⭐ **Favoritos** que funcionam até sem conta (guardados no navegador) e são **sincronizados automaticamente** ao entrar (`POST /api/favorites/merge`)
 - 🔔 **Alertas de vagas** — novas vagas compatíveis disparam notificação (hoje via `MockEmailService`)
@@ -133,6 +134,7 @@ Copie `.env.example` para `.env` (Docker) ou use variáveis de ambiente/User Sec
 | `GET` | `/api/jobs?technology=&location=&source=&page=&pageSize=` | — | Lista vagas (pageSize ≤ 100) |
 | `GET` | `/api/jobs/{id}` | — | Detalhe de uma vaga (404 com ProblemDetails se não existir) |
 | `GET` | `/api/jobs/sources` | — | Fontes ativas (descobertas via DI) |
+| `GET` | `/api/salaries/summary?currency=&minimumSamples=&maxTechnologies=` | — | Mediana/p25/p75 por tecnologia + cobertura salarial |
 | `GET` | `/api/jobs/export` | — | Exporta CSV (até 5.000 vagas) |
 | `POST` | `/api/jobs/sync` | ✅ JWT | Importa novas vagas |
 | `DELETE` | `/api/jobs/duplicates` | ✅ JWT | Remove duplicatas |
@@ -158,6 +160,8 @@ Erros seguem o formato **ProblemDetails** (`title`, `detail`, `status`, `traceId
 | [JobsBase](https://jobsbase.io) | `GET /api/v1/jobs?limit=50` | ❌ |
 | [Adzuna](https://adzuna.com) | `GET /api/jobs/gb/search/1` | ✅ |
 
+> Salários: a Remotive informa `salary` em texto livre, a Adzuna traz `salary_min`/`salary_max` (GBP/ano, ignorando valores previstos) e a RemoteOK traz `salary_min`/`salary_max` (USD/ano). As demais fontes não informam salário — por isso o comparativo expõe a cobertura.
+
 Para adicionar uma fonte, implemente `IJobSource` em `src/JobRadar.Infrastructure/Sources/` e registre-a em `Infrastructure/DependencyInjection.cs` — o sync a descobre automaticamente via DI.
 
 > [!NOTE]
@@ -169,6 +173,7 @@ Para adicionar uma fonte, implemente `IJobSource` em `src/JobRadar.Infrastructur
 dotnet test            # xUnit + Moq: handlers, domínio e validadores, com cobertura (coverlet)
 node --check docs/script.js
 node --check docs/job.js
+node --check docs/salaries.js
 ```
 
 ## Segurança

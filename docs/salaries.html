@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salários por tecnologia — JobRadar</title>
+    <meta name="description" content="Comparativo salarial por tecnologia nas vagas de tecnologia agregadas pelo JobRadar: mediana, faixa interquartil e cobertura dos dados.">
+    <meta name="theme-color" content="#080b12">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Salários por tecnologia — JobRadar">
+    <meta property="og:description" content="Mediana salarial por tecnologia nas vagas reais agregadas pelo JobRadar.">
+    <meta property="og:locale" content="pt_BR">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="style.css?v=20261101">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+</head>
+<body>
+    <a class="skip-link" href="#salarios">Pular para o comparativo</a>
+
+    <header class="detail-topbar">
+        <div class="container detail-topbar-inner">
+            <a class="detail-brand" href="index.html">
+                <i class="fas fa-satellite-dish" aria-hidden="true"></i> JobRadar
+            </a>
+            <nav class="detail-nav" aria-label="Navegação principal">
+                <a class="btn-outline" href="index.html">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> Vagas
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" id="salarios">
+        <div class="salary-hero">
+            <p class="header-eyebrow"><span aria-hidden="true"></span>Dados das próprias vagas</p>
+            <h1>Quanto paga cada tecnologia?</h1>
+            <p class="salary-subtitle">
+                Mediana e faixa interquartil calculadas apenas sobre as vagas que <strong>informam</strong> salário.
+                Nada de estimativa: se o anúncio não diz, a vaga não entra na conta.
+            </p>
+        </div>
+
+        <p id="salary-status" class="sr-only" role="status" aria-live="polite"></p>
+
+        <div class="salary-controls">
+            <label for="salary-currency">Moeda</label>
+            <select id="salary-currency" disabled>
+                <option value="">Carregando…</option>
+            </select>
+            <p id="salary-coverage" class="salary-coverage"></p>
+        </div>
+
+        <section id="salary-chart" aria-label="Salários por tecnologia" aria-busy="true">
+            <div class="loading">
+                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                <p>Calculando medianas…</p>
+            </div>
+        </section>
+
+        <p id="salary-disclaimer" class="salary-disclaimer"></p>
+
+        <a class="detail-back" href="index.html">← Voltar para as vagas</a>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                <a href="index.html">Início</a> ·
+                <a href="https://github.com/evertonldesouza/JobRadar" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+                Desenvolvido por <strong>Everton L. de Souza</strong> &copy; 2026
+            </p>
+        </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <noscript><p style="text-align:center;padding:16px">O JobRadar precisa de JavaScript para calcular o comparativo.</p></noscript>
+    <script src="salaries.js?v=20261101"></script>
+</body>
+</html>

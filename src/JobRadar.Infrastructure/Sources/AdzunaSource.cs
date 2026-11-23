@@ -1,5 +1,6 @@
 using System.Text.Json;
 using JobRadar.Domain.Entities;
+using JobRadar.Domain.ValueObjects;
 using JobRadar.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 
@@ -59,7 +60,8 @@ public class AdzunaSource : IJobSource
                 if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(url2))
                     continue;
 
-                jobs.Add(Job.Create(title, company, location, url2, publishedAt, technologies, Name));
+                jobs.Add(Job.Create(title, company, location, url2, publishedAt, technologies, Name,
+                    ExtractSalary(item)));
             }
             catch
             {
@@ -69,6 +71,40 @@ public class AdzunaSource : IJobSource
 
         return jobs;
     }
+
+    /// <summary>
+    /// A Adzuna traz salary_min/salary_max (GBP, base anual) e salary_is_predicted:
+    /// valores estimados pela própria Adzuna são descartados para não misturar
+    /// dado real com palpite.
+    /// </summary>
+    private static SalaryRange? ExtractSalary(JsonElement item)
+    {
+        if (item.TryGetProperty("salary_is_predicted", out var predicted) &&
+            predicted.ValueKind == JsonValueKind.String &&
+            predicted.GetString() == "1")
+            return null;
+
+        var min = ReadDecimal(item, "salary_min");
+        var max = ReadDecimal(item, "salary_max");
+
+        if (min is null && max is null)
+            return null;
+
+        var low = min ?? max!.Value;
+        var high = max ?? min!.Value;
+
+        return new SalaryRange(low, high, "GBP", SalaryPeriod.Year);
+    }
+
+    private static decimal? ReadDecimal(JsonElement item, string property) =>
+        item.TryGetProperty(property, out var el) &&
+        el.ValueKind is JsonValueKind.Number or JsonValueKind.String &&
+        decimal.TryParse(el.ValueKind == JsonValueKind.Number ? el.GetRawText() : el.GetString(),
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var value) &&
+        value > 0
+            ? value
+            : null;
 
     private static List<string> ExtractTechnologies(string text)
     {

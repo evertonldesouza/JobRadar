@@ -246,6 +246,11 @@ function renderJobCard(job, index = 0, term = '') {
 
     const footer = el('div', 'job-footer');
     const metaBox = el('div', 'job-footer-meta');
+    if (job.salaryText) {
+        const salary = el('span', 'salary-badge', job.salaryText);
+        salary.title = `Salário informado pela fonte (${job.source || 'anúncio original'})`;
+        metaBox.appendChild(salary);
+    }
     const date = job.publishedAt ? new Date(job.publishedAt).toLocaleDateString('pt-BR') : '';
     const badge = el('span', 'source-badge', job.source || '');
     badge.dataset.source = job.source || '';
