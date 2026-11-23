@@ -27,7 +27,18 @@ public class JobRepository : IJobRepository
         var query = _context.Jobs.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(technology))
-            query = query.Where(j => j.Technologies.Contains(technology.Trim()));
+        {
+            // Busca tolerante: aceita o termo como digitado e em minúsculas, e também
+            // procura no título/empresa (vagas cujo anúncio não traz tags).
+            var term = technology.Trim();
+            var lower = term.ToLowerInvariant();
+
+            query = query.Where(j =>
+                j.Technologies.Contains(term) ||
+                j.Technologies.Contains(lower) ||
+                j.Title.ToLower().Contains(lower) ||
+                j.Company.ToLower().Contains(lower));
+        }
 
         if (!string.IsNullOrWhiteSpace(location))
             query = query.Where(j => j.Location.ToLower().Contains(location.Trim().ToLower()));
@@ -60,6 +71,18 @@ public class JobRepository : IJobRepository
     {
         await _context.Jobs.AddRangeAsync(jobs);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetExistingIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return [];
+
+        return await _context.Jobs
+            .AsNoTracking()
+            .Where(j => ids.Contains(j.Id))
+            .Select(j => j.Id)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<string>> GetExistingUrlsAsync(IReadOnlyCollection<string> urls, CancellationToken cancellationToken = default)

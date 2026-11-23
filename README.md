@@ -31,8 +31,9 @@ O JobRadar agrega vagas de tecnologia de múltiplas fontes públicas, permite fi
 ## Funcionalidades
 
 - 🔐 Autenticação com **JWT** (expiração configurável) e **OAuth via Google**, com vínculo de contas existentes
-- 🔎 Listagem e filtragem de vagas por tecnologia, localização e fonte, com paginação validada (máx. 100/página)
-- ⭐ Sistema de **favoritos** por usuário
+- 🔎 Listagem e filtragem de vagas por tecnologia, localização e fonte, com paginação validada (máx. 100/página) e **busca tolerante** (ignora caixa e também procura no título/empresa), com o termo **destacado** nos cards
+- 🗂️ **Página de detalhes** por vaga (`docs/job.html?id=…`) com meta tags dinâmicas para compartilhamento
+- ⭐ **Favoritos** que funcionam até sem conta (guardados no navegador) e são **sincronizados automaticamente** ao entrar (`POST /api/favorites/merge`)
 - 🔔 **Alertas de vagas** — novas vagas compatíveis disparam notificação (hoje via `MockEmailService`)
 - 🛰️ **5 fontes agregadas** (RemoteOK, Remotive, CareerNest, JobsBase, Adzuna), buscadas em paralelo, com deduplicação em lote
 - 🔄 Sincronização manual autenticada (`POST /api/jobs/sync`) e **automática configurável** via background service
@@ -130,6 +131,7 @@ Copie `.env.example` para `.env` (Docker) ou use variáveis de ambiente/User Sec
 | Método | Endpoint | Auth | Descrição |
 |---|---|---|---|
 | `GET` | `/api/jobs?technology=&location=&source=&page=&pageSize=` | — | Lista vagas (pageSize ≤ 100) |
+| `GET` | `/api/jobs/{id}` | — | Detalhe de uma vaga (404 com ProblemDetails se não existir) |
 | `GET` | `/api/jobs/sources` | — | Fontes ativas (descobertas via DI) |
 | `GET` | `/api/jobs/export` | — | Exporta CSV (até 5.000 vagas) |
 | `POST` | `/api/jobs/sync` | ✅ JWT | Importa novas vagas |
@@ -141,6 +143,7 @@ Copie `.env.example` para `.env` (Docker) ou use variáveis de ambiente/User Sec
 | `POST` | `/api/auth/forgot-password` · `/api/auth/reset-password` | — | Recuperação de senha por email (link de 1h) |
 | `GET` | `/api/auth/google` | — | OAuth Google (callback redireciona ao frontend com os tokens) |
 | `GET/POST/DELETE` | `/api/favorites[/{jobId}]` | ✅ JWT | Favoritos do usuário |
+| `POST` | `/api/favorites/merge` | ✅ JWT | Sincroniza favoritos salvos no navegador (idempotente, até 200 ids) |
 | `GET/POST/DELETE` | `/api/alerts[/{id}]` | ✅ JWT | Alertas do usuário |
 
 Erros seguem o formato **ProblemDetails** (`title`, `detail`, `status`, `traceId`; validações incluem `errors` por campo). Exemplos prontos em [`src/JobRadar.API/JobRadar.API.http`](src/JobRadar.API/JobRadar.API.http).
@@ -165,6 +168,7 @@ Para adicionar uma fonte, implemente `IJobSource` em `src/JobRadar.Infrastructur
 ```bash
 dotnet test            # xUnit + Moq: handlers, domínio e validadores, com cobertura (coverlet)
 node --check docs/script.js
+node --check docs/job.js
 ```
 
 ## Segurança
