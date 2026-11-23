@@ -228,4 +228,16 @@ public class ApiIntegrationTests : IClassFixture<JobRadarApiFactory>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task SalarySummary_IncludesBackfilledSalary()
+    {
+        // O seed da factory já cria duas vagas com salário; após o backfill do
+        // sync (coberto nos testes de handler), o resumo precisa enxergá-las.
+        var response = await _client.GetAsync("/api/Salaries/summary?currency=USD&minimumSamples=1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(json.RootElement.GetProperty("coverage").GetProperty("jobsWithSalary").GetInt32() >= 2);
+    }
 }

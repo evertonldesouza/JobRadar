@@ -1,4 +1,5 @@
 using JobRadar.Domain.Entities;
+using JobRadar.Domain.ValueObjects;
 
 namespace JobRadar.Tests.Domain;
 
@@ -51,5 +52,65 @@ public class DomainTests
 
         Assert.Null(alert.Technology);
         Assert.Equal("Remoto", alert.Location);
+    }
+
+    [Fact]
+    public void TrySetSalary_FillsWhenMissing()
+    {
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/1", DateTime.UtcNow, ["C#"], "Test");
+        Assert.False(job.HasSalary);
+
+        var changed = job.TrySetSalary(new SalaryRange(80000, 100000, "USD", SalaryPeriod.Year));
+
+        Assert.True(changed);
+        Assert.True(job.HasSalary);
+        Assert.Equal(80000, job.SalaryMin);
+        Assert.Equal("USD", job.SalaryCurrency);
+        Assert.Equal("year", job.SalaryPeriod);
+    }
+
+    [Fact]
+    public void TrySetSalary_DoesNotOverwriteKnownSalary()
+    {
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/2", DateTime.UtcNow, ["Go"], "Test",
+            new SalaryRange(50000, 60000, "USD", SalaryPeriod.Year));
+
+        var changed = job.TrySetSalary(new SalaryRange(90000, 99000, "EUR", SalaryPeriod.Month));
+
+        Assert.False(changed);
+        Assert.Equal(50000, job.SalaryMin);
+        Assert.Equal("USD", job.SalaryCurrency);
+    }
+
+    [Fact]
+    public void TrySetSalary_WithNull_DoesNothing()
+    {
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/3", DateTime.UtcNow, ["Go"], "Test");
+
+        Assert.False(job.TrySetSalary(null));
+        Assert.False(job.HasSalary);
+    }
+
+    [Fact]
+    public void SalaryRange_FromJob_RoundTrips()
+    {
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/4", DateTime.UtcNow, ["Go"], "Test",
+            new SalaryRange(4000, 5000, "EUR", SalaryPeriod.Month));
+
+        var range = SalaryRange.FromJob(job);
+
+        Assert.NotNull(range);
+        Assert.Equal(4000, range!.Min);
+        Assert.Equal(5000, range.Max);
+        Assert.Equal("EUR", range.Currency);
+        Assert.Equal(SalaryPeriod.Month, range.Period);
+    }
+
+    [Fact]
+    public void SalaryRange_FromJob_WithoutSalary_ReturnsNull()
+    {
+        var job = Job.Create("Dev", "Co", "Remote", "https://example.com/5", DateTime.UtcNow, [], "Test");
+
+        Assert.Null(SalaryRange.FromJob(job));
     }
 }

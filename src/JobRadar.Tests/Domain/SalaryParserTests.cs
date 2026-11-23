@@ -11,6 +11,8 @@ public class SalaryParserTests
     [InlineData("€60,000 - €80,000", 60000, 80000, "EUR", SalaryPeriod.Year)]
     [InlineData("R$ 8.000 - R$ 12.000", 8000, 12000, "BRL", SalaryPeriod.Year)]
     [InlineData("£40k - £55k per annum", 40000, 55000, "GBP", SalaryPeriod.Year)]
+    [InlineData("USD 90,000 per year", 90000, 90000, "USD", SalaryPeriod.Year)]
+    [InlineData("EUR 70k annually", 70000, 70000, "EUR", SalaryPeriod.Year)]
     [InlineData("$50/hour", 50, 50, "USD", SalaryPeriod.Hour)]
     [InlineData("USD 100,000", 100000, 100000, "USD", SalaryPeriod.Year)]
     [InlineData("R$ 150 por hora", 150, 150, "BRL", SalaryPeriod.Hour)]
