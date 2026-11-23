@@ -1,17 +1,48 @@
 version: 2
+
 updates:
+  # Pacotes NuGet das bibliotecas. Agrupados por família para não abrir um PR
+  # por pacote (e para o bump de versões irmãs ir junto, evitando conflito).
   - package-ecosystem: nuget
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      aspnetcore:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+          - "Microsoft.Extensions.*"
+      efcore:
+        patterns:
+          - "Microsoft.EntityFrameworkCore*"
+          - "Npgsql.EntityFrameworkCore*"
+      testing:
+        patterns:
+          - "xunit*"
+          - "Moq"
+          - "coverlet*"
+          - "Microsoft.NET.Test.Sdk"
+      validação-e-mensageria:
+        patterns:
+          - "FluentValidation*"
+          - "MediatR*"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 3
 
+  # Imagens do Dockerfile. O .NET 11 é bump de major e não entra sozinho:
+  # o projeto está em net10.0 com global.json fixando o SDK 10.0.100.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: "mcr.microsoft.com/dotnet/aspnet"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mcr.microsoft.com/dotnet/sdk"
+        update-types: ["version-update:semver-major"]
