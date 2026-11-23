@@ -1,4 +1,5 @@
 using JobRadar.Domain.Entities;
+using JobRadar.Domain.ValueObjects;
 
 namespace JobRadar.Domain.Interfaces;
 
@@ -11,6 +12,10 @@ public interface IJobRepository
         int page = 1,
         int pageSize = 20);
     Task<Job?> GetByIdAsync(Guid id);
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Vagas que informam salário, já projetadas para as estatísticas.</summary>
+    Task<IReadOnlyList<JobSalaryEntry>> GetSalaryEntriesAsync(CancellationToken cancellationToken = default);
     Task<bool> ExistsByUrlAsync(string url);
     Task AddRangeAsync(IEnumerable<Job> jobs);
     Task<bool> ExistsByTitleAndCompanyAsync(string title, string company);

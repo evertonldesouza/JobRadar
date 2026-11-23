@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JobRadar.Application.Common;
 using JobRadar.Domain.Entities;
 using JobRadar.Domain.Interfaces;
 
@@ -48,7 +49,11 @@ public class RemotiveSource : IJobSource
                 if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(url))
                     continue;
 
-                jobs.Add(Job.Create(title, company, location, url, publishedAt, tags, Name));
+                // A Remotive informa o salário como texto livre (ou vazio).
+                var salary = SalaryParser.TryParse(
+                    item.TryGetProperty("salary", out var salaryEl) ? salaryEl.GetString() : null);
+
+                jobs.Add(Job.Create(title, company, location, url, publishedAt, tags, Name, salary));
             }
             catch
             {

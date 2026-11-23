@@ -19,6 +19,9 @@ GET {{baseUrl}}/api/Jobs/sources
 ### Exportar CSV
 GET {{baseUrl}}/api/Jobs/export?technology=python
 
+### Comparativo salarial por tecnologia
+GET {{baseUrl}}/api/Salaries/summary?minimumSamples=3&maxTechnologies=10
+
 ### Registrar
 POST {{baseUrl}}/api/Auth/register
 Content-Type: application/json

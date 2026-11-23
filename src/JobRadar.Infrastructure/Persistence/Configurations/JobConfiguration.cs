@@ -16,6 +16,14 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(j => j.Url).IsRequired().HasMaxLength(1000);
         builder.Property(j => j.Source).IsRequired().HasMaxLength(100);
 
+        builder.Property(j => j.SalaryMin).HasPrecision(18, 2);
+        builder.Property(j => j.SalaryMax).HasPrecision(18, 2);
+        builder.Property(j => j.SalaryCurrency).HasMaxLength(3);
+        builder.Property(j => j.SalaryPeriod).HasMaxLength(16);
+
+        // Propriedade calculada: não faz parte do schema.
+        builder.Ignore(j => j.HasSalary);
+
         var comparer = new ValueComparer<List<string>>(
             (c1, c2) => c1!.SequenceEqual(c2!),
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),

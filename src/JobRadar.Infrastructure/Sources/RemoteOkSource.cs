@@ -1,5 +1,6 @@
 using System.Text.Json;
 using JobRadar.Domain.Entities;
+using JobRadar.Domain.ValueObjects;
 using JobRadar.Domain.Interfaces;
 
 namespace JobRadar.Infrastructure.Sources;
@@ -48,7 +49,8 @@ public class RemoteOkSource : IJobSource
                 if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(url))
                     continue;
 
-                jobs.Add(Job.Create(title, company, location, url, publishedAt, tags, Name));
+                jobs.Add(Job.Create(title, company, location, url, publishedAt, tags, Name,
+                    ExtractSalary(item)));
             }
             catch
             {
@@ -58,4 +60,22 @@ public class RemoteOkSource : IJobSource
 
         return jobs;
     }
+
+    /// <summary>RemoteOK expõe salary_min/salary_max em USD por ano (0 = não informado).</summary>
+    private static SalaryRange? ExtractSalary(JsonElement item)
+    {
+        var min = ReadAmount(item, "salary_min");
+        var max = ReadAmount(item, "salary_max");
+
+        if (min is null && max is null)
+            return null;
+
+        return new SalaryRange(min ?? max!.Value, max ?? min!.Value, "USD", SalaryPeriod.Year);
+    }
+
+    private static decimal? ReadAmount(JsonElement item, string property) =>
+        item.TryGetProperty(property, out var el) && el.ValueKind == JsonValueKind.Number &&
+        el.TryGetDecimal(out var value) && value > 0
+            ? value
+            : null;
 }

@@ -1,4 +1,5 @@
 using JobRadar.Domain.Entities;
+using JobRadar.Domain.ValueObjects;
 using JobRadar.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,13 +39,15 @@ public sealed class JobRadarApiFactory : WebApplicationFactory<Program>
 
         var python = Job.Create(
             "Python Backend Developer", "Acme", "Remote", "https://example.com/jobs/python",
-            DateTime.UtcNow.AddDays(-1), ["python", "django"], "TestSource");
+            DateTime.UtcNow.AddDays(-1), ["python", "django"], "TestSource",
+            new SalaryRange(80000, 120000, "USD", SalaryPeriod.Year));
         var dotnet = Job.Create(
             ".NET Developer", "Globex", "São Paulo", "https://example.com/jobs/dotnet",
             DateTime.UtcNow.AddDays(-2), ["c#", ".net", "sql"], "TestSource");
         var dataJob = Job.Create(
             "Data Engineer", "Initech", "Remote", "https://example.com/jobs/data",
-            DateTime.UtcNow.AddDays(-3), ["python", "sql", "airflow"], "TestSource");
+            DateTime.UtcNow.AddDays(-3), ["python", "sql", "airflow"], "TestSource",
+            new SalaryRange(90000, 110000, "USD", SalaryPeriod.Year));
 
         db.Jobs.AddRange(python, dotnet, dataJob);
         db.SaveChanges();
